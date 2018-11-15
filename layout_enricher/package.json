@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "commander": "^2.19.0",
+    "cytoscape": "^3.2.17"
+  }
+}

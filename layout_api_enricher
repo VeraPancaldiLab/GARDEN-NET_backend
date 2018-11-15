@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+
+from subprocess import check_output
+import argparse
+import os
+import requests
+import sys
+import time
+
+# Command line arguments
+parser = argparse.ArgumentParser(
+    description="Separated values file to cytoscape json mapper"
+)
+
+parser.add_argument(
+    "cytoscape_json_file",
+    type=argparse.FileType("r"),
+    nargs="?",
+    help="Cytoscape Json format",
+)
+
+parser.add_argument("-p", "--port", type=int, default=1234, help="Cytoscape REST port")
+
+parser.add_argument(
+    "-f",
+    "--format",
+    default="json",
+    choices=["json", "png", "pdf", "svg", "all_images"],
+    help="The default output is 'json'",
+)
+
+parser.add_argument("-n", "--name", help="Filename")
+
+parser.add_argument(
+    "-u", "--url", default="http://localhost", help="Cytoscape REST url"
+)
+
+parser.add_argument(
+    "-av", "--api_version", type=int, default=1, help="Cytoscape REST version"
+)
+
+parser.add_argument("-d", "--directory", default="", help="Default directory")
+
+parser.add_argument("-l", "--layout", default="force-directed", help="Cytoscape layout")
+
+args = parser.parse_args()
+
+# Generate main url for the rest requests
+CYTOSCAPE_BASE_URL = args.url + ":" + str(args.port) + "/v" + str(args.api_version)
+
+# Load data from file or pipe
+if args.cytoscape_json_file:
+    cytoscape_json_file = args.cytoscape_json_file[0]  # nargs = 1 is also a list
+    file_content = cytoscape_json_file.read()
+else:
+    file_content = sys.stdin.read()
+
+# Upload the network to Cytoscape
+post_response = requests.post(CYTOSCAPE_BASE_URL + "/networks", data=file_content)
+json_post_response = post_response.json()
+
+# Extract the network id for the next rest requests
+network_id = str(json_post_response["networkSUID"])
+
+# Apply the network layout
+get_response = requests.get(
+    CYTOSCAPE_BASE_URL + "/apply/layouts/" + args.layout + "/" + network_id
+)
+
+# Features
+features = [
+    "BRG1",
+    "CBX3",
+    "CBX7",
+    "C_MYC",
+    "CoREST",
+    "E2F1",
+    "ESRRB",
+    "HCFC1",
+    "HDAC1",
+    "HDAC2",
+    "KAP1",
+    "KDM2A",
+    "KDM2B",
+    "KLF4",
+    "LAMINB",
+    "LSD1",
+    "MAFK",
+    "MAX",
+    "MBD1A",
+    "MBD1B",
+    "MBD2A",
+    "MBD2T",
+    "MBD3A",
+    "MBD4",
+    "MECP2",
+    "MED1",
+    "MED12",
+    "MI2B",
+    "MLL2",
+    "NANOG",
+    "NIPBL",
+    "N_MYC",
+    "OCT4",
+    "OGT",
+    "P300",
+    "PHF19",
+    "POLII",
+    "RAD21",
+    "REST",
+    "RING1B",
+    "RNAPII.8WG16",
+    "RNAPII.S2P",
+    "RNAPII.S5P",
+    "RNAPII.S7P",
+    "RYBP",
+    "SETDB1",
+    "SIN3A",
+    "SMAD1",
+    "SMC1",
+    "SMC3",
+    "SOX2",
+    "STAT3",
+    "SUZ12",
+    "TAF1",
+    "TCF3",
+    "TCFCP2I1",
+    "TET1",
+    "ZC3H11A",
+    "ZNF384",
+    "X5fC",
+    "X5hmC",
+    "X5mC",
+    "CTCF",
+    "H2AZ",
+    "H2Aub1",
+    "H3K27ac",
+    "H3K27me3",
+    "H3K36me2",
+    "H3K36me3",
+    "H3K4me1",
+    "H3K4me2",
+    "H3K4me3",
+    "H3K79me2",
+    "H3K9ac",
+    "H3K9me3",
+    "H4K20me3",
+    "EZH2",
+    "G9A",
+]
+
+# Use the selected folder and create it if not exits
+if args.directory:
+    directory = args.directory
+    if directory[-1] != "/":
+        directory += "/"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+# Print the network in json format
+if args.format == "json":
+    get_response = requests.get(
+        CYTOSCAPE_BASE_URL + "/networks/" + network_id + "/views/first"
+    )
+    print(get_response.text)
+
+# Save the network image
+elif args.format in ["png", "pdf", "svg", "all_images"]:
+
+    # Generate and apply the style for each feature
+    for feature in features:
+        style = """
+        [
+          {{
+            "mappingType": "discrete",
+            "mappingColumn": "{feature}",
+            "mappingColumnType": "Double",
+            "visualProperty": "NODE_FILL_COLOR",
+            "map": [
+              {{
+                "key": "0.0",
+                "value": "#CCCCCC"
+              }},
+              {{
+                "key": "1.0",
+                "value": "#00FF00"
+              }}
+            ]
+          }}
+        ]
+        """.format(
+            feature=feature
+        )
+
+        # Apply the style to the network
+        post_response = requests.post(
+            CYTOSCAPE_BASE_URL + "/styles/default/mappings", data=style
+        )
+
+        # Weirds thing happen to the images if we don't wait to get them
+        time.sleep(0.5)
+
+        cmd = None
+        if args.format in ["png", "pdf", "svg"]:
+            cmd = " ".join(
+                [
+                    "wget "
+                    + CYTOSCAPE_BASE_URL
+                    + "/networks/"
+                    + network_id
+                    + "/views/first."
+                    + args.format,
+                    "--quiet",
+                    "--output-document",
+                    directory + feature + "." + args.format,
+                ]
+            )
+            output = check_output(cmd, shell=True)
+        elif args.format == "all_images":
+            for image_format in ["png", "pdf", "svg"]:
+                cmd = " ".join(
+                    [
+                        "wget "
+                        + CYTOSCAPE_BASE_URL
+                        + "/networks/"
+                        + network_id
+                        + "/views/first."
+                        + image_format,
+                        "--quiet",
+                        "--output-document",
+                        directory + feature + "." + image_format,
+                    ]
+                )
+                output = check_output(cmd, shell=True)

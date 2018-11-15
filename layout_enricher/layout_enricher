@@ -1,0 +1,83 @@
+#!/usr/bin/env node
+
+const fs        = require('fs');
+const program   = require('commander');
+const cytoscape = require('cytoscape');
+
+// Detect if the input is a PIPE or file
+program
+  .usage('json_cytoscape_file\n  or   layout_enricher < json_cytoscape_file\n  or   | layout_enricher')
+
+if(process.stdin.isTTY) {
+  program.parse(process.argv);
+  if (program.args.length !== 1) {
+    program.help()
+  } else {
+    let json_cytoscape_file = program.args[0]
+    fs.readFile(json_cytoscape_file, (err, file_content) => {
+    if (err) throw err;
+    build_network(file_content)
+  });
+  }
+}
+else {
+var inputChunks = [];
+
+process.stdin.setEncoding('utf8');
+
+process.stdin.on('readable', () => {
+  const chunk = process.stdin.read();
+  if (chunk !== null) {
+    inputChunks.push(chunk);
+  }
+});
+
+process.stdin.on('end', function () {
+
+  var input_string = inputChunks.join('');
+  build_network(input_string)
+
+});
+
+}
+
+function build_network(input_string) {
+
+  var parsedJSON = JSON.parse(input_string);
+
+  var network = cytoscape({
+    elements: parsedJSON,
+    layout: {
+      name: 'preset'
+    }
+  });
+
+  var layout = network.layout({
+    name: 'cose',
+    animate: false,
+    randomize: true,
+    idealEdgeLength: 100,
+    nodeOverlap: 20,
+    refresh: 20,
+    fit: true,
+    padding: 30,
+    componentSpacing: 100,
+    nodeRepulsion: 400000,
+    edgeElasticity: 100,
+    nestingFactor: 5,
+    gravity: 80,
+    numIter: 1000,
+    initialTemp: 200,
+    coolingFactor: 0.95,
+    minTemp: 1.0
+  });
+
+  layout.on('layoutstop', write);
+
+  layout.run();
+
+  function write(){
+    outputJSON = JSON.stringify(network.elements().jsons(), null, '  ');
+    process.stdout.write(outputJSON);
+  }
+}

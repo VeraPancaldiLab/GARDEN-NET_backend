@@ -1,0 +1,265 @@
+#!/usr/bin/env python3
+
+import argparse
+import csv
+import json
+import numpy as np
+import pandas as pd
+import re
+import sys
+from collections import defaultdict
+import subprocess
+
+# Command line arguments
+parser = argparse.ArgumentParser(
+    description="Separated values file to cytoscape json mapper"
+)
+parser.add_argument(
+    "input_tsv",
+    type=argparse.FileType("r"),
+    nargs=1,
+    help="Separated values file as input file",
+)
+parser.add_argument(
+    "--features",
+    type=argparse.FileType("r"),
+    default=None,
+    nargs="?",
+    help="Separated values file as input file",
+)
+parser.add_argument(
+    "-c",
+    "--chromosomes",
+    default=None,
+    nargs="*",
+    help="Chromosomes to be annonated separated eg: 1 X",
+)
+parser.add_argument(
+    "-ff",
+    "--features_filter",
+    default=None,
+    nargs="*",
+    help="Features to be annonated separated eg: BRG1 CBX3",
+)
+parser.add_argument(
+    "-fb",
+    "--features_binarization",
+    type=bool,
+    default=True,
+    help="Features will be binarized by default",
+)
+parser.add_argument(
+    "-s", "--separator", default="\t", help="Separator by default is: '\\t' "
+)
+parser.add_argument(
+    "-f",
+    "--format",
+    default="json",
+    choices=["json", "tsv", "csv", "gephi"],
+    help="The default output is 'json'",
+)
+parser.add_argument(
+    "-v", "--version", action="version", version="%(prog)s 0.1"
+)
+parser.add_argument(
+    "--wt_threshold",
+    default=5.0,
+    help="The minimun value for considering the edge",
+)
+
+args = parser.parse_args()
+
+sv_file = args.input_tsv[0]  # nargs = 1 is also a list
+
+df = pd.read_table(sv_file, sep=args.separator)
+
+df_f_wt = df.loc[df.mESC_wt > args.wt_threshold]
+
+edges = {}
+nodes = {}
+unique_nodes = set()
+unique_edges = set()
+
+# Create output dataframe
+df_output = pd.DataFrame()
+# Create id for bait and oe nodes
+df_output["bait"] = (
+    df_f_wt["baitChr"].map(str)
+    + "_"
+    + df_f_wt["baitStart"].map(str)
+    + "_"
+    + df_f_wt["baitEnd"].map(str)
+)
+df_output["oe"] = (
+    df_f_wt["oeChr"].map(str)
+    + "_"
+    + df_f_wt["oeStart"].map(str)
+    + "_"
+    + df_f_wt["oeEnd"].map(str)
+)
+df_output["mESC_wt"] = df_f_wt["mESC_wt"]
+# Only add the first name to the node
+df_output["baitName"] = df_f_wt["baitName"].apply(
+    lambda baitname: baitname.split(",")[0]
+)
+df_output["oeName"] = df_f_wt["oeName"].apply(
+    lambda oename: oename.split(",")[0] if oename != "." else ""
+)
+# All nodes from bait column are bait
+bait_set = set(df_output["bait"])
+# There are many baits in the oe columns
+possible_oe_set = set(df_output["oe"])
+# The oe nodes are the diference from oe column minus the bait column
+oe_set = possible_oe_set - bait_set
+df_output["type"] = "bait-" + df_output["oe"].apply(
+    lambda fragment: "oe" if fragment in oe_set else "bait"
+)
+df_output["edge"] = df_output["bait"] + "~" + df_output["oe"]
+
+# Filter by required chromosomes
+if args.chromosomes:
+    chromosomes_regex_string = (
+        "^" + "(" + "|".join(args.chromosomes) + ")" + "_"
+    )
+    chromosomes_regex = re.compile(chromosomes_regex_string)
+
+    chr_indexes = df_output["bait"].str.contains(
+        chromosomes_regex
+    ) & df_output["oe"].str.contains(chromosomes_regex)
+    if not chr_indexes.any():
+        print(
+            "There are not chromosomes with the numbers: ",
+            ", ".join(args.chromosomes),
+            file=sys.stderr,
+        )
+        exit(-1)
+    else:
+        df_output = df_output.loc[chr_indexes,]
+
+# Add nodes and edges from the data frame to a dict
+for index, row in df_output.iterrows():
+
+    for type_index, _type in enumerate(["bait", "oe"]):
+        nodeId = row[_type]
+        if nodeId not in nodes:
+            nodes[nodeId] = {}
+            nodes[nodeId]["type"] = row["type"].split("-")[type_index]
+            nodes[nodeId]["name"] = row[_type + "Name"]
+
+    edgeId = row["edge"]
+    if edgeId not in edges:
+        edges[edgeId] = {}
+        edges[edgeId]["mESC_wt"] = row["mESC_wt"]
+        edges[edgeId]["type"] = row["type"]
+
+# Different output formats
+if args.features and args.format == "json":
+
+    # Check if exist one header name per column
+    # if not, we have to add 'fragments' header at the beginning
+    with open(args.features.name) as features_file:
+        header = features_file.readline()
+        first_line = features_file.readline()
+        size_header = len(header.split("\t"))
+        size_first_line = len(first_line.split("\t"))
+        if size_header < size_first_line:
+            write_first_header = (
+                "sed -i '1 s/^/fragments\t/'" + " " + args.features.name
+            )
+            process = subprocess.Popen(
+                write_first_header, shell=True, stdout=subprocess.PIPE
+            )
+            process.wait()
+
+    df_features = pd.read_table(args.features)
+    df_features["fragments"] = df_features["fragments"].apply(
+        lambda chr: chr[3:]
+    )
+    if args.features_binarization:
+        for column in df_features.columns[1:]:
+            df_features[column] = (df_features[column] > 0).astype(int)
+
+    df_with_features = pd.DataFrame()
+    df_with_features["fragments"] = list(
+        set(df_output["bait"].append(df_output["oe"]))
+    )
+
+    df_with_features["fragments"] = df_with_features["fragments"].apply(
+        lambda fragment: "_".join(fragment.split("_")[:2])
+    )
+
+    df_with_features = df_with_features.merge(
+        df_features, how="left", on="fragments"
+    )
+
+    fragment_nodes = []
+    existing_fragments = list(df_with_features["fragments"])
+    for nodeId in nodes:
+        nodeId_start = "_".join(nodeId.split("_")[:2])
+
+        if nodeId_start in existing_fragments:
+            features_dict = df_with_features.loc[
+                df_with_features["fragments"] == nodeId_start, :
+            ].to_dict(orient="records")[0]
+
+            del features_dict["fragments"]
+
+            nodes[nodeId]["features"] = features_dict
+            nodes[nodeId]["feature_node"] = nodeId_start
+
+if args.format == "json":
+    cytoscape_mapper = []
+    for nodeId in nodes:
+        cytoscape_node = {}
+        cytoscape_node["data"] = {}
+        cytoscape_node["data"]["id"] = nodeId
+        chr, start, end = nodeId.split("_")
+        cytoscape_node["data"]["chr"] = chr
+        cytoscape_node["data"]["start"] = int(start)
+        cytoscape_node["data"]["end"] = int(end)
+        cytoscape_node["data"]["type"] = nodes[nodeId]["type"]
+        cytoscape_node["data"]["name"] = nodes[nodeId]["name"]
+        cytoscape_node["group"] = "nodes"
+
+        if args.features:
+            if "features" in nodes[nodeId]:
+                # cytoscape_node["data"]["features"] = nodes[nodeId]["features"]
+                for feature, value in nodes[nodeId]["features"].items():
+                    cytoscape_node["data"][feature] = value
+                cytoscape_node["data"]["feature_node"] = nodes[nodeId][
+                    "feature_node"
+                ]
+
+        cytoscape_mapper.append(cytoscape_node)
+
+    for edgeId in edges:
+        cytoscape_edge = {}
+        cytoscape_edge["data"] = {}
+        cytoscape_edge["data"]["id"] = edgeId
+        baitNodeId, oeNodeId = edgeId.split("~")
+        cytoscape_edge["data"]["type"] = "-".join(
+            [nodes[baitNodeId]["type"], nodes[oeNodeId]["type"]]
+        )
+        cytoscape_edge["data"]["source"] = baitNodeId
+        cytoscape_edge["data"]["target"] = oeNodeId
+        bait, oe = edgeId.split("~")
+        chrBait = bait.split("_")[0]
+        chrOe = oe.split("_")[0]
+        chromosomes = list()
+        chromosomes.append(chrBait)
+        chromosomes.append(chrOe)
+        cytoscape_edge["data"]["chromosomes"] = "~".join(chromosomes)
+        cytoscape_edge["data"]["mESC_wt"] = edges[edgeId]["mESC_wt"]
+        cytoscape_edge["group"] = "edges"
+
+        cytoscape_mapper.append(cytoscape_edge)
+
+    print(json.dumps(cytoscape_mapper, sort_keys=True, indent=2))
+
+elif args.format == "csv" or args.format == "tsv":
+    separator = "," if args.format == "csv" else "\t"
+    print(df_output.to_csv(sep=separator, columns=["bait", "oe"], index=False))
+
+elif args.format == "gephi":
+    for index, row in df_output.iterrows():
+        print(row["bait"] + ";" + row["oe"])
