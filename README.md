@@ -17,7 +17,8 @@ This tool converts R dataframes in TSV of connected chromosome fragments and fro
 usage: ./network_generator.R [-h] [--wt_threshold WT_THRESHOLD]
                              [--features FEATURES] [--search SEARCH]
                              [--chromosome CHROMOSOME]
-                             [--no-features-binarization]
+                             [--no-features-binarization] [--nearest]
+                             [--expand EXPAND]
                              PCHiC file
 
 Separated values file to cytoscape json mapper
@@ -30,12 +31,16 @@ optional arguments:
   --wt_threshold WT_THRESHOLD
                         The minimun value for considering the edge
   --features FEATURES   Separated values file of features as input file
+
   --search SEARCH       Search node by name or fragment position in the graph
                         to generate a neighborhood subgraph
   --chromosome CHROMOSOME
                         Filter by chromosome
   --no-features-binarization
                         Features will be binarized by default
+  --nearest             Search the nearest range
+  --expand EXPAND       Number of bases to expand the search by range
+
 ```
 ## layout_enricher
 
@@ -107,3 +112,12 @@ optional arguments:
 `cytoscape -R 1234 &`
 
 `parallel --eta -j 1 ./network_generator.R "PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e 's/\"\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher -f png -d chromosomes/chr{}" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
+
+## backend.py
+Backend for the [network_generator.R](network_generator.R) script
+
+### Dependencies
+  - [Flask](http://flask.pocoo.org/)
+
+### Usage
+FLASK_APP=backend.py flask run
