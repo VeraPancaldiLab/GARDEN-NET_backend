@@ -76,6 +76,7 @@ start <- c(chrs_wt$baitStart, chrs_wt$oeStart)
 end <- c(chrs_wt$baitEnd, chrs_wt$oeEnd)
 curated_chrs_vertex <- distinct(data_frame(fragment, gene_names, chr, start, end))
 curated_gene_name <- str_split_fixed(curated_chrs_vertex$gene_names, "-", n = 2)[, 1]
+curated_gene_name <- ifelse(curated_gene_name != '.', curated_gene_name, '')
 curated_chrs_vertex <- mutate(curated_chrs_vertex, curated_gene_name)
 # Add gene names in array form splitted by ,
 curated_chrs_vertex$gene_list <-
