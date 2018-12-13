@@ -41,7 +41,13 @@ def main():
         cmd_list.append('--expand')
         cmd_list.append(expand)
 
+    other_cmd = []
+    other_cmd.append(r"sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/'")
+    other_cmd.append('./layout_api_enricher')
+    other_cmd.append('jq --compact-output .elements')
 
-    print(" ".join(cmd_list))
-    output = check_output(" ".join(cmd_list), shell=True, encoding='UTF-8')
+    all_cmds = " ".join(cmd_list) + " | " + " | ".join(other_cmd)
+
+    print(all_cmds)
+    output = check_output(all_cmds, shell=True, encoding='UTF-8')
     return output
