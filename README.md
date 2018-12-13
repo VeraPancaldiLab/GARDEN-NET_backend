@@ -118,6 +118,7 @@ Backend for the [network_generator.R](network_generator.R) script
 
 ### Dependencies
   - [Flask](http://flask.pocoo.org/)
+  - [Flask-CORS](https://flask-cors.readthedocs.io/)
 
 ### Usage
 FLASK_APP=backend.py flask run
