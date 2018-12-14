@@ -121,4 +121,4 @@ Backend for the [network_generator.R](network_generator.R) script
   - [Flask-CORS](https://flask-cors.readthedocs.io/)
 
 ### Usage
-FLASK_APP=backend.py flask run
+FLASK_APP=backend.py flask run --host=0.0.0.0
