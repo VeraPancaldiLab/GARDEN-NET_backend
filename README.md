@@ -107,6 +107,8 @@ optional arguments:
 #### Nodejs headless mode (very slow)
 `parallel --eta ./network_generator.R "PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --compact-output . > chromosomes/chr{}.json" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
 #### CyRest not headless mode (very fast)
+`cytoscape -R 1234 &`
+
 `parallel --eta -j 1 ./network_generator.R "PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --compact-output .elements > chromosomes/chr{}.json" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
 ### Usage - generate images
 `cytoscape -R 1234 &`
