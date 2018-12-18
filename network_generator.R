@@ -44,6 +44,7 @@ args <- parser$parse_args()
 # args <- parser$parse_args(c("~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317"))
 #args <- parser$parse_args(c("~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317", "--nearest"))
 #args <- parser$parse_args(c("~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa1"))
+#args <- parser$parse_args(c("~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "C10orf54"))
 
 # Load PCHiC
 chrs <-
@@ -146,8 +147,12 @@ if (!is.null(args$search)) {
     if (args$nearest) {
       nearest_range_index <- nearest(required_range, curated_chrs_vertex_ranges)
       required_vertex <- curated_chrs_vertex_ranges[nearest_range_index]$fragment
-      # make_ego_graph always returns a list
-      required_subnet <- make_ego_graph(net, nodes = required_vertex)[[1]]
+      if (is.null(required_vertex)) {
+        required_subnet <- NULL
+      } else {
+        # make_ego_graph always returns a list
+        required_subnet <- make_ego_graph(net, nodes = required_vertex)[[1]]
+      }
     } else {
       # Work with overlaps instead
       overlaps_index <- subjectHits(findOverlaps(required_range, curated_chrs_vertex_ranges))
@@ -161,11 +166,12 @@ if (!is.null(args$search)) {
     }
   } else {
     required_vertex <- search_vertex(args$search, net)
-    # make_ego_graph always returns a list
-    required_subnet <- make_ego_graph(net, nodes = required_vertex)[[1]]
-  }
-  if (is.null(required_vertex)) {
-    required_subnet <- NULL
+    if (is.null(required_vertex)) {
+      required_subnet <- NULL
+    } else {
+      # make_ego_graph always returns a list
+      required_subnet <- make_ego_graph(net, nodes = required_vertex)[[1]]
+    }
   }
 } else {
   required_subnet <- net
