@@ -35,7 +35,11 @@ process.stdin.on('readable', () => {
 process.stdin.on('end', function () {
 
   var input_string = inputChunks.join('');
-  build_network(input_string)
+  if (input_string == '{}') {
+    process.stdout.write('{}');
+  } else {
+    build_network(input_string)
+  }
 
 });
 
