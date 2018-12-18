@@ -1,5 +1,5 @@
 from subprocess import check_output, CalledProcessError
-from flask import Flask, request
+from flask import Flask, request, abort
 from flask_cors import CORS
 import shelve
 import re
@@ -75,5 +75,7 @@ def main():
 
     shelve_cache.close()
 
+    if len(output) == 3:
+        return abort(404)
 
     return output
