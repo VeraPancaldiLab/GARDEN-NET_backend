@@ -211,9 +211,8 @@ generate_cytoscape_json <- function(required_subnet) {
 if (!is.null(required_subnet)) {
   generate_cytoscape_json(required_subnet)
 } else {
-  cat("[]")
+  cat("{}")
 }
 
 # Plotting example
 #plot(required_subnet, vertex.label = V(required_subnet)$curated_gene_name, vertex.size = 5 + 2 * degree(required_subnet), vertex.color = c("gray", "lightgreen")[1 + V(required_subnet)$EZH2], vertex.shape = ifelse(V(required_subnet)$type == "bait", "circle", "square"), edge.color = "black")
-
