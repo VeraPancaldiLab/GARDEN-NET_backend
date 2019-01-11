@@ -128,3 +128,12 @@ Backend for the [network_generator.R](network_generator.R) script
 
 ### Usage
 FLASK_APP=backend.py flask run --host=0.0.0.0
+
+## Docker deployment
+### Build image
+
+docker build -t cytoscape-utils
+
+### Run container
+#### backend<span/>.py
+`docker run --rm --interactive --tty --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "FLASK_APP=backend.py flask run --host=0.0.0.0"`
