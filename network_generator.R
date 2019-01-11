@@ -75,7 +75,7 @@ gene_names <- c(chrs_wt$baitName, chrs_wt$oeName)
 chr <- c(chrs_wt$baitChr, chrs_wt$oeChr)
 start <- c(chrs_wt$baitStart, chrs_wt$oeStart)
 end <- c(chrs_wt$baitEnd, chrs_wt$oeEnd)
-curated_chrs_vertex <- distinct(data_frame(fragment, gene_names, chr, start, end))
+curated_chrs_vertex <- distinct(tibble(fragment, gene_names, chr, start, end))
 # Only use the first name
 curated_gene_name <- str_split_fixed(curated_chrs_vertex$gene_names, ",", n = 2)[, 1]
 # Remove from the last dash to the end of the name
@@ -108,7 +108,7 @@ if (!is.null(args$features)) {
 ## ------------------------------------------------------------------------
 # Generate a dataframe with the extremes of the edges
 oes <- paste(chrs_wt$oeChr, chrs_wt$oeStart, sep = "_")
-curated_chrs_edges <- data.frame(source = baits, target = oes)
+curated_chrs_edges <- tibble(source = baits, target = oes)
 
 ## ------------------------------------------------------------------------
 net <-
