@@ -28,4 +28,4 @@ RUN Rscript -e 'BiocManager::install("GenomicRanges")'
 
 RUN apt install -y jq python3-dev python3-pip python3-gdbm parallel
 
-RUN pip3 install flask flask-cors
+RUN pip3 install flask flask-cors gunicorn

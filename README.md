@@ -125,9 +125,10 @@ Backend for the [network_generator.R](network_generator.R) script
 ### Dependencies
   - [Flask](http://flask.pocoo.org/)
   - [Flask-CORS](https://flask-cors.readthedocs.io/)
+  - [gunicorn](https://github.com/benoitc/gunicorn/)
 
 ### Usage
-FLASK_APP=backend.py flask run --host=0.0.0.0
+gunicorn --bind 0.0.0.0:5000 wsgi:app
 
 ## Docker deployment
 ### Build image
@@ -135,5 +136,8 @@ FLASK_APP=backend.py flask run --host=0.0.0.0
 docker build -t cytoscape-utils
 
 ### Run container
-#### backend<span/>.py
-`docker run --rm --interactive --tty --publish 5000:5000 --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "FLASK_APP=backend.py flask run --host=0.0.0.0"`
+#### wsgi<span/>.py development
+`docker run --rm --interactive --tty --publish 5000:5000 --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "gunicorn --bind 0.0.0.0:5000 wsgi:app"`
+
+#### wsgi<span/>.py deployment
+`docker run --rm --interactive --tty --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "gunicorn --workers 3 --bind unix:backend.sock -m 007 wsgi:app"`
