@@ -136,4 +136,4 @@ docker build -t cytoscape-utils
 
 ### Run container
 #### backend<span/>.py
-`docker run --rm --interactive --tty --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "FLASK_APP=backend.py flask run --host=0.0.0.0"`
+`docker run --rm --interactive --tty --publish 5000:5000 --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "FLASK_APP=backend.py flask run --host=0.0.0.0"`
