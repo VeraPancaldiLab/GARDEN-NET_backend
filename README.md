@@ -140,4 +140,4 @@ docker build -t cytoscape-utils
 `docker run --rm --interactive --tty --publish 5000:5000 --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "gunicorn --workers 9 --bind 0.0.0.0:5000 wsgi:app"`
 
 #### wsgi<span/>.py deployment
-`docker run --rm --interactive --tty --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "gunicorn --workers 9 --bind unix:backend.sock -m 007 wsgi:app"`
+`docker run --rm --interactive --tty --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "gunicorn --workers 9 --bind unix:backend.sock wsgi:app"`
