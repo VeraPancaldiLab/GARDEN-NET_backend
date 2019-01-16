@@ -5,6 +5,8 @@ suppressPackageStartupMessages(library(GenomicRanges))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(tidyverse))
 
+source("./network_generator_lib.R")
+
 # Argparse
 parser <- OptionParser(description = "Separated values file to cytoscape json mapper")
 parser <- add_option(parser, "--PCHiC", help = "Separated values file PCHiC as input file")
@@ -49,12 +51,12 @@ chrs <-
   ))
 
 # Filter by threshold
-chrs_wt <- chrs[chrs$mESC_wt > args$wt_threshold, ]
+chrs_wt <- chrs[chrs$mESC_wt > args$wt_threshold,]
 
 # Filter by chromosome
 if (!is.null(args$chromosome)) {
   chrs_wt <- chrs_wt[which(chrs_wt$baitChr == args$chromosome
-  & chrs_wt$oeChr == args$chromosome), ]
+                           & chrs_wt$oeChr == args$chromosome),]
 }
 
 ## ------------------------------------------------------------------------
@@ -70,13 +72,17 @@ gene_names <- c(chrs_wt$baitName, chrs_wt$oeName)
 chr <- c(chrs_wt$baitChr, chrs_wt$oeChr)
 start <- c(chrs_wt$baitStart, chrs_wt$oeStart)
 end <- c(chrs_wt$baitEnd, chrs_wt$oeEnd)
-curated_chrs_vertex <- distinct(tibble(fragment, gene_names, chr, start, end))
+curated_chrs_vertex <-
+  distinct(tibble(fragment, gene_names, chr, start, end))
 # Only use the first name
-curated_gene_name <- str_split_fixed(curated_chrs_vertex$gene_names, ",", n = 2)[, 1]
+curated_gene_name <-
+  str_split_fixed(curated_chrs_vertex$gene_names, ",", n = 2)[, 1]
 # Remove from the last dash to the end of the name
 curated_gene_name <- str_replace(curated_gene_name, "-[^-]+$", "")
-curated_gene_name <- ifelse(curated_gene_name != ".", curated_gene_name, "")
-curated_chrs_vertex <- mutate(curated_chrs_vertex, curated_gene_name)
+curated_gene_name <-
+  ifelse(curated_gene_name != ".", curated_gene_name, "")
+curated_chrs_vertex <-
+  mutate(curated_chrs_vertex, curated_gene_name)
 # Add gene names in array form splitted by ,
 curated_chrs_vertex$gene_list <-
   str_split(curated_chrs_vertex$gene_names, ",")
@@ -106,114 +112,24 @@ oes <- paste(chrs_wt$oeChr, chrs_wt$oeStart, sep = "_")
 curated_chrs_edges <- tibble(source = baits, target = oes)
 
 ## ------------------------------------------------------------------------
+# Generate the network
 net <-
   graph_from_data_frame(curated_chrs_edges, directed = F, curated_chrs_vertex)
 
-## ------------------------------------------------------------------------
-search_vertex <- function(vertex, graph) {
-  # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
-  # Always return NULL if it doesn't exist the vertex in the graph
-  if (str_detect(vertex, "^((1?[0-9])|([XY]))_\\d+$")) {
-    if (!any(V(net)$name == vertex)) {
-      return(NULL)
-    }
-    return(V(net)[vertex])
-  } else {
-    searched_vertex_index <- curated_chrs_vertex$curated_gene_name == vertex
-    if (!any(searched_vertex_index)) {
-      return(NULL)
-    }
-    return(V(net)[searched_vertex_index])
-  }
-}
 
-## Generate required subnetwork
-if (!is.null(args$search)) {
-  if (str_detect(args$search, "((1?[0-9])|([XY])):\\d+(-\\d+)?$")) {
-    # We are working with a range
-    curated_chrs_vertex_ranges <- makeGRangesFromDataFrame(curated_chrs_vertex, keep.extra.columns = T, ignore.strand = FALSE)
-    required_range <- GRanges(args$search)
-    # Expand the selected range if it is required
-    if (args$expand != 0) {
-      start(required_range) <- start(required_range) - args$expand
-      end(required_range) <- end(required_range) + args$expand
-    }
-    # Work with the nearest if it is required
-    if (args$nearest) {
-      nearest_range_index <- nearest(required_range, curated_chrs_vertex_ranges)
-      required_vertex <- curated_chrs_vertex_ranges[nearest_range_index]$fragment
-      if (is.null(required_vertex)) {
-        required_subnet <- NULL
-      } else {
-        # make_ego_graph always returns a list
-        required_subnet <- make_ego_graph(net, nodes = required_vertex)[[1]]
-      }
-    } else {
-      # Work with overlaps instead
-      overlaps_index <- subjectHits(findOverlaps(required_range, curated_chrs_vertex_ranges))
-      required_vertex <- curated_chrs_vertex_ranges[overlaps_index]$fragment
-      required_vertex_with_neighbours <- names(unlist(lapply(required_vertex, function(rv) {
-        neighbors(net, rv)
-      })))
-      # Add the overlapping vertex
-      required_vertex_with_neighbours <- unique(c(required_vertex_with_neighbours, required_vertex))
-      required_subnet <- induced_subgraph(net, vids = required_vertex_with_neighbours)
-    }
-  } else {
-    required_vertex <- search_vertex(args$search, net)
-    if (is.null(required_vertex)) {
-      required_subnet <- NULL
-    } else {
-      # make_ego_graph always returns a list
-      required_subnet <- make_ego_graph(net, nodes = required_vertex)[[1]]
-    }
-  }
-} else {
-  required_subnet <- net
-}
+# Search the required subnetwork
+required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net, curated_chrs_vertex)
 
-## Generate Cytoscape JSON
-generate_cytoscape_json <- function(required_subnet) {
-  # Recover vertices neighbourhood subnetwork dataframe from the graph
-  vertices_df <-
-    igraph::as_data_frame(required_subnet, what = "vertices")
-  # Remove row names
-  row.names(vertices_df) <- NULL
-  # _ in column names is not valid in Cytoscape JSON
-  vertices_df <-
-    rename(vertices_df, !!c(id = "name", names = "gene_names"))
-  # lists are not a valid supported type in Cytoscape JSON
-  vertices_df$gene_list <- NULL
-  # Nest all vertice rows inside data key and add the group type, both required by Cytoscape JSON
-  vertices_df <-
-    apply(vertices_df, 1, function(vertice_row) {
-      list(data = vertice_row, group = "nodes")
-    })
-  # Recover edges neighbourhood subnetwork dataframe from the graph
-  edges_df <- igraph::as_data_frame(required_subnet, what = "edges")
-  # Remove row names
-  row.names(edges_df) <- NULL
-  # Rename edge extremes with the Cytoscape JSON squema
-  edges_df <- rename(edges_df, !!c(source = "from", target = "to"))
-  # Add id to the edges
-  edges_df$id <- paste(edges_df$source, edges_df$target, sep = "~")
-  # Nest all edge rows inside data key and add the group type, both required by Cytoscape JSON
-  edges_df <-
-    apply(edges_df, 1, function(edge_row) {
-      list(data = edge_row, group = "edges")
-    })
-  # Join vertices and edges inside the same dataframe
-  JSON_df <- c(vertices_df, edges_df)
-  # Write JSON dataframe to a file
-  # write_lines(toJSON(JSON_df, indent = 2), 'neighboord.json')
-  cat(toJSON(JSON_df, indent = 2))
-}
 # Convert the required subnetwork to Cytoscape Json format
-if (!is.null(required_subnet)) {
-  generate_cytoscape_json(required_subnet)
-} else {
-  cat("{}")
-}
+required_subnet_json <- generate_cytoscape_json(required_subnet)
+cat(required_subnet_json)
 
 # Plotting example
-#plot(required_subnet, vertex.label = V(required_subnet)$curated_gene_name, vertex.size = 5 + 2 * degree(required_subnet), vertex.color = c("gray", "lightgreen")[1 + V(required_subnet)$EZH2], vertex.shape = ifelse(V(required_subnet)$type == "bait", "circle", "square"), edge.color = "black")
+#plot(
+#  required_subnet,
+#  vertex.label = V(required_subnet)$curated_gene_name,
+#  vertex.size = 25 + 2 * degree(required_subnet),
+#  vertex.color = c("gray", "lightgreen")[1 + V(required_subnet)$EZH2],
+#  vertex.shape = ifelse(V(required_subnet)$type == "bait", "square", "circle"),
+#  edge.color = "black"
+#)
