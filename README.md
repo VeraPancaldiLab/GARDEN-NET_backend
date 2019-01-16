@@ -7,40 +7,43 @@ Set of utilities and helpers for generating json networks in *cytoscape.js json*
 This tool converts R dataframes in TSV of connected chromosome fragments and from optionally with a features dataframe file to *cytoscape json* format
 
 ### Dependencies
-- [argparse](https://github.com/trevorld/argparse)
+- [optparse](https://github.com/trevorld/r-optparse)
 - [igraph](https://igraph.org/r/)
 - [rjson](https://github.com/alexcb/rjson/)
 - [tidyverse](https://www.tidyverse.org/)
 
 ### Usage
 ```
-usage: ./network_generator.R [-h] [--wt_threshold WT_THRESHOLD]
-                             [--features FEATURES] [--search SEARCH]
-                             [--chromosome CHROMOSOME]
-                             [--no-features-binarization] [--nearest]
-                             [--expand EXPAND]
-                             PCHiC file
-
+Usage: ./network_generator.R [options]
 Separated values file to cytoscape json mapper
 
-positional arguments:
-  PCHiC file            Separated values file PCHiC as input file
+Options:
+        -h, --help
+                Show this help message and exit
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --wt_threshold WT_THRESHOLD
-                        The minimun value for considering the edge
-  --features FEATURES   Separated values file of features as input file
+        --PCHiC=PCHIC
+                Separated values file PCHiC as input file
 
-  --search SEARCH       Search node by name or fragment position in the graph
-                        to generate a neighborhood subgraph
-  --chromosome CHROMOSOME
-                        Filter by chromosome
-  --no-features-binarization
-                        Features will be binarized by default
-  --nearest             Search the nearest range
-  --expand EXPAND       Number of bases to expand the search by range
+        --wt_threshold=WT_THRESHOLD
+                The minimun value for considering the edge [default: 5]
 
+        --features=FEATURES
+                Separated values file of features as input file
+
+        --search=SEARCH
+                Search node by name or fragment position in the graph to generate a neighborhood subgraph
+
+        --chromosome=CHROMOSOME
+                Filter by chromosome
+
+        --no-features-binarization
+                Features will be binarized by default
+
+        --nearest
+                Search the nearest range
+
+        --expand=EXPAND
+                Number of bases to expand the search by ran
 ```
 ## layout_enricher
 
@@ -105,19 +108,19 @@ optional arguments:
 
 ### Usage - generate JSONs
 #### Nodejs headless mode (very slow)
-`parallel --eta ./network_generator.R "PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --monochrome-output --compact-output . > chromosomes/chr{}.json" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
+`parallel --eta ./network_generator.R "--PCHiC PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --monochrome-output --compact-output . > chromosomes/chr{}.json" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
 #### CyRest not headless mode (very fast)
 `cytoscape -R 1234 &`
 
-`parallel --eta -j 1 ./network_generator.R "PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --monochrome-output --compact-output .elements > chromosomes/chr{}.json" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
+`parallel --eta -j 1 ./network_generator.R "--PCHiC PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --monochrome-output --compact-output .elements > chromosomes/chr{}.json" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
 
 ### Usage - Generate search
-`./network_generator.R PCHiC_interaction_map.txt --features Features_mESC.txt --search 'Hoxa1' | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --monochrome-output --compact-output .`
+`./network_generator.R --PCHiC PCHiC_interaction_map.txt --features Features_mESC.txt --search 'Hoxa1' | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --monochrome-output --compact-output .`
 
 ### Usage - generate images
 `cytoscape -R 1234 &`
 
-`parallel --eta -j 1 ./network_generator.R "PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher -f png -d chromosomes/chr{}" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
+`parallel --eta -j 1 ./network_generator.R "--PCHiC PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher -f png -d chromosomes/chr{}" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
 
 ## backend.<span/>py
 Backend for the [network_generator.R](network_generator.R) script

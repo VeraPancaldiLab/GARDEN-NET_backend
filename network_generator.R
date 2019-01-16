@@ -1,55 +1,50 @@
 #!/usr/bin/env Rscript
 library(rjson)
-library(argparse)
+library(optparse)
 suppressPackageStartupMessages(library(GenomicRanges))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(tidyverse))
 
 # Argparse
-parser <-
-  ArgumentParser(description = "Separated values file to cytoscape json mapper")
-parser$add_argument("PCHiC file", nargs = 1, help = "Separated values file PCHiC as input file")
-parser$add_argument("--wt_threshold",
-  type = "double",
-  default = "5.0",
-  help = "The minimun value for considering the edge"
-)
-parser$add_argument("--features",
-  help = "Separated values file of features as input file"
-)
-parser$add_argument("--search",
-  help = "Search node by name or fragment position in the graph to generate a neighborhood subgraph"
-)
-parser$add_argument("--chromosome",
-  help = "Filter by chromosome"
-)
-parser$add_argument("--no-features-binarization",
-  action = "store_true",
-  help = "Features will be binarized by default"
-)
-parser$add_argument("--nearest",
-  action = "store_true",
-  help = "Search the nearest range"
-)
-parser$add_argument("--expand",
-  type = "integer",
-  default = "0",
-  help = "Number of bases to expand the search by range"
-)
+parser <- OptionParser(description = "Separated values file to cytoscape json mapper")
+parser <- add_option(parser, "--PCHiC", help = "Separated values file PCHiC as input file")
+parser <- add_option(parser, "--wt_threshold",
+                    type = "double",
+                    default = 5.0,
+                    help = "The minimun value for considering the edge [default: %default]")
+parser <- add_option(parser, "--features",
+                    help = "Separated values file of features as input file")
+parser <- add_option(parser, "--search",
+                    help = "Search node by name or fragment position in the graph to generate a neighborhood subgraph")
+parser <- add_option(parser, "--chromosome",
+                    help = "Filter by chromosome")
+parser <- add_option(parser, "--no-features-binarization",
+                    action = "store_true",
+                    default = F,
+                    help = "Features will be binarized by default")
+parser <- add_option(parser, "--nearest",
+                    action = "store_true",
+                    default = F,
+                    help = "Search the nearest range")
+parser <- add_option(parser, "--expand",
+                    type = "integer",
+                    default = 0,
+                    help = "Number of bases to expand the search by range")
 
-
-args <- parser$parse_args()
 # Differents examples of parameters
-#args <- parser$parse_args(c("~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317", "--expand", "20000"))
-# args <- parser$parse_args(c("~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317"))
-#args <- parser$parse_args(c("~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317", "--nearest"))
-#args <- parser$parse_args(c("~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa1"))
-#args <- parser$parse_args(c("~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "C10orf54"))
+# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt")
+# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317", "--expand", "20000")
+# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317")
+# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317", "--nearest")
+#args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa1")
+# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "C10orf54")
+# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa13")
+args <- parse_args(parser, convert_hyphens_to_underscores = T)
 
 # Load PCHiC
 chrs <-
   suppressMessages(read_tsv(
-    file = args$`PCHiC file`,
+    file = args$PCHiC,
     col_types = cols(baitChr = col_character())
   ))
 

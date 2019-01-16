@@ -16,7 +16,7 @@ RUN apt update && apt install -y yarn
 
 RUN apt install -y curl libssl-dev libxml2-dev libcurl4-openssl-dev
 
-RUN Rscript -e 'install.packages(c("tidyverse", "rjson", "igraph", "argparse"))'
+RUN Rscript -e 'install.packages(c("tidyverse", "rjson", "igraph", "optparse"))'
 
 RUN Rscript -e 'install.packages("BiocManager")'
 

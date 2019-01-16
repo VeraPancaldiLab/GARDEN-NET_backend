@@ -38,7 +38,7 @@ def main():
     key = '|'.join([search, features_key, nearest_key, expand_key])
 
     if  key not in shelve_cache:
-        cmd_list = ["./network_generator.R data/PCHiC_interaction_map.txt"]
+        cmd_list = ["./network_generator.R --PCHiC data/PCHiC_interaction_map.txt"]
 
         if features is not None:
             cmd_list.append("--features")
