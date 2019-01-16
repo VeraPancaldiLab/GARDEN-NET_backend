@@ -124,6 +124,8 @@ required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net
 required_subnet_json <- generate_cytoscape_json(required_subnet)
 cat(required_subnet_json)
 
+# save(net, curated_chrs_vertex, file = 'garnet.Rdata', compress = F)
+
 # Plotting example
 #plot(
 #  required_subnet,
