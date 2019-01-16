@@ -1,3 +1,37 @@
+parser_arguments <- function(args) {
+  parser <- OptionParser(description = "Separated values file to cytoscape json mapper")
+  parser <- add_option(parser, "--PCHiC", help = "Separated values file PCHiC as input file")
+  parser <- add_option(parser, "--wt_threshold",
+    type = "double",
+    default = 5.0,
+    help = "The minimun value for considering the edge [default: %default]"
+  )
+  parser <- add_option(parser, "--features",
+    help = "Separated values file of features as input file"
+  )
+  parser <- add_option(parser, "--search",
+    help = "Search node by name or fragment position in the graph to generate a neighborhood subgraph"
+  )
+  parser <- add_option(parser, "--chromosome",
+    help = "Filter by chromosome"
+  )
+  parser <- add_option(parser, "--no-features-binarization",
+    action = "store_true",
+    default = F,
+    help = "Features will be binarized by default"
+  )
+  parser <- add_option(parser, "--nearest",
+    action = "store_true",
+    default = F,
+    help = "Search the nearest range"
+  )
+  parser <- add_option(parser, "--expand",
+    type = "integer",
+    default = 0,
+    help = "Number of bases to expand the search by range"
+  )
+  return(parse_args(parser, args, convert_hyphens_to_underscores = T))
+}
 ## ------------------------------------------------------------------------
 search_vertex_by_name <-
   function(vertex, net, curated_chrs_vertex) {

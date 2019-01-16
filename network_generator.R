@@ -7,32 +7,7 @@ suppressPackageStartupMessages(library(tidyverse))
 
 source("./network_generator_lib.R")
 
-# Argparse
-parser <- OptionParser(description = "Separated values file to cytoscape json mapper")
-parser <- add_option(parser, "--PCHiC", help = "Separated values file PCHiC as input file")
-parser <- add_option(parser, "--wt_threshold",
-                    type = "double",
-                    default = 5.0,
-                    help = "The minimun value for considering the edge [default: %default]")
-parser <- add_option(parser, "--features",
-                    help = "Separated values file of features as input file")
-parser <- add_option(parser, "--search",
-                    help = "Search node by name or fragment position in the graph to generate a neighborhood subgraph")
-parser <- add_option(parser, "--chromosome",
-                    help = "Filter by chromosome")
-parser <- add_option(parser, "--no-features-binarization",
-                    action = "store_true",
-                    default = F,
-                    help = "Features will be binarized by default")
-parser <- add_option(parser, "--nearest",
-                    action = "store_true",
-                    default = F,
-                    help = "Search the nearest range")
-parser <- add_option(parser, "--expand",
-                    type = "integer",
-                    default = 0,
-                    help = "Number of bases to expand the search by range")
-
+# OptParse
 # Differents examples of parameters
 # args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt")
 # args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317", "--expand", "20000")
@@ -41,7 +16,9 @@ parser <- add_option(parser, "--expand",
 #args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa1")
 # args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "C10orf54")
 # args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa13")
-args <- parse_args(parser, convert_hyphens_to_underscores = T)
+
+args <- commandArgs(trailingOnly = TRUE)
+args <- parser_arguments(args)
 
 # Load PCHiC
 chrs <-
