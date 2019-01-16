@@ -117,6 +117,9 @@ optional arguments:
 ### Usage - Generate search
 `./network_generator.R --PCHiC PCHiC_interaction_map.txt --features Features_mESC.txt --search 'Hoxa1' | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --monochrome-output --compact-output .`
 
+### Usage - Search query
+`./search_query.R --PCHiC PCHiC_interaction_map.txt --features Features_mESC.txt --search 'Hoxa1' | sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --monochrome-output --compact-output .`
+
 ### Usage - generate images
 `cytoscape -R 1234 &`
 
