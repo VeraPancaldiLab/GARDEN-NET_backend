@@ -57,11 +57,27 @@ search_vertex_by_name <-
     }
   }
 
+nearest_subnetwork <- function(required_range, net, curated_chrs_vertex_ranges) {
+  nearest_range_index <-
+    nearest(required_range, curated_chrs_vertex_ranges)
+  required_vertex <-
+    curated_chrs_vertex_ranges[nearest_range_index]$fragment
+  if (is.null(required_vertex)) {
+    required_subnet <- NULL
+  } else {
+    # make_ego_graph always returns a list
+    required_subnet <-
+      make_ego_graph(net, nodes = required_vertex)[[1]]
+  }
+  return(required_subnet)
+}
 search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_vertex) {
   curated_chrs_vertex_ranges <-
-    makeGRangesFromDataFrame(curated_chrs_vertex,
-                             keep.extra.columns = T,
-                             ignore.strand = FALSE)
+    makeGRangesFromDataFrame(
+      curated_chrs_vertex,
+      keep.extra.columns = T,
+      ignore.strand = FALSE
+    )
   required_range <- GRanges(search)
   # Expand the selected range if it is required
   if (expand != 0) {
@@ -70,17 +86,7 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
   }
   # Work with the nearest if it is required
   if (nearest) {
-    nearest_range_index <-
-      nearest(required_range, curated_chrs_vertex_ranges)
-    required_vertex <-
-      curated_chrs_vertex_ranges[nearest_range_index]$fragment
-    if (is.null(required_vertex)) {
-      required_subnet <- NULL
-    } else {
-      # make_ego_graph always returns a list
-      required_subnet <-
-        make_ego_graph(net, nodes = required_vertex)[[1]]
-    }
+    required_subnet <- nearest_subnetwork(required_range, net, curated_chrs_vertex_ranges)
   } else {
     # Work with overlaps instead
     overlaps_index <-
@@ -95,7 +101,7 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
     required_vertex_with_neighbours <-
       unique(c(required_vertex_with_neighbours, required_vertex))
     if (length(required_vertex_with_neighbours) == 0) {
-      required_subnet <- NULL
+      required_subnet <- nearest_subnetwork(required_range, net, curated_chrs_vertex_ranges)
     } else {
       required_subnet <-
         induced_subgraph(net, vids = required_vertex_with_neighbours)
