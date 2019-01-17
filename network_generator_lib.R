@@ -127,8 +127,8 @@ generate_cytoscape_json <- function(required_subnet) {
   # Remove row names
   row.names(vertices_df) <- NULL
   # _ in column names is not valid in Cytoscape JSON
-  vertices_df <-
-    rename(vertices_df, !!c(id = "name", names = "gene_names"))
+  colnames(vertices_df)[1] <- "id"
+  colnames(vertices_df)[2] <- "names"
   # lists are not a valid supported type in Cytoscape JSON
   vertices_df$gene_list <- NULL
   # Nest all vertice rows inside data key and add the group type, both required by Cytoscape JSON
@@ -141,7 +141,8 @@ generate_cytoscape_json <- function(required_subnet) {
   # Remove row names
   row.names(edges_df) <- NULL
   # Rename edge extremes with the Cytoscape JSON squema
-  edges_df <- rename(edges_df, !!c(source = "from", target = "to"))
+  colnames(edges_df)[1] <- "source"
+  colnames(edges_df)[2] <- "target"
   # Add id to the edges
   edges_df$id <- paste(edges_df$source, edges_df$target, sep = "~")
   # Nest all edge rows inside data key and add the group type, both required by Cytoscape JSON
