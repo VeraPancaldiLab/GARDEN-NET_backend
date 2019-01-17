@@ -38,7 +38,7 @@ search_vertex_by_name <-
     # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
     # Always return NULL if it doesn't exist the vertex in the graph
     if (str_detect(vertex, "^((1?[0-9])|([XY]))_\\d+$")) {
-      if (!any(V(net)$name == vertex)) {
+      if (!vertex %in% curated_chrs_vertex$fragment) {
         return(NULL)
       }
       required_vertex <- V(net)[vertex]
@@ -46,11 +46,10 @@ search_vertex_by_name <-
         make_ego_graph(net, nodes = required_vertex)[[1]]
       return(required_subnet)
     } else {
-      searched_vertex_index <-
-        curated_chrs_vertex$curated_gene_name == vertex
-      if (!any(searched_vertex_index)) {
+      if (!vertex %in% curated_chrs_vertex$curated_gene_name) {
         return(NULL)
       }
+      searched_vertex_index <- curated_chrs_vertex$curated_gene_name == vertex
       required_vertex <- V(net)[searched_vertex_index]
       required_subnet <-
         make_ego_graph(net, nodes = required_vertex)[[1]]
