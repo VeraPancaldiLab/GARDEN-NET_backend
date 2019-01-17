@@ -1,4 +1,4 @@
-from subprocess import check_output, CalledProcessError
+from subprocess import check_output
 from flask import Flask, request, abort
 from flask_cors import CORS
 import shelve
@@ -7,7 +7,7 @@ import re
 app = Flask(__name__)
 CORS(app)
 
-sanitize_pattern = re.compile('\W')
+SANITIZE_PATTERN = re.compile('[^-a-zA-Z0-9:]')
 
 @app.route("/", defaults={'search': ''})
 @app.route("/")
@@ -45,7 +45,7 @@ def main():
             cmd_list.append("data/Features_mESC.txt")
 
         if search:
-            sanitized_search = sanitize_pattern.sub('', search)
+            sanitized_search = SANITIZE_PATTERN.sub('', search.split()[0])
             cmd_list.append('--search')
             cmd_list.append("'" + sanitized_search + "'")
 
