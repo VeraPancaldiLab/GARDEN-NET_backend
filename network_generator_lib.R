@@ -94,8 +94,12 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
     # Add the overlapping vertex
     required_vertex_with_neighbours <-
       unique(c(required_vertex_with_neighbours, required_vertex))
-    required_subnet <-
-      induced_subgraph(net, vids = required_vertex_with_neighbours)
+    if (length(required_vertex_with_neighbours) == 0) {
+      required_subnet <- NULL
+    } else {
+      required_subnet <-
+        induced_subgraph(net, vids = required_vertex_with_neighbours)
+    }
   }
   return(required_subnet)
 }
