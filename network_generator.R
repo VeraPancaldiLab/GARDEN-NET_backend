@@ -88,6 +88,9 @@ curated_chrs_edges <- tibble(source = baits, target = oes)
 net <-
   graph_from_data_frame(curated_chrs_edges, directed = F, curated_chrs_vertex)
 
+# Add additional network metadata
+V(net)$degree <- degree(net)
+
 if (str_detect(args$search, "((1?[0-9])|([XY])):\\d+(-\\d+)?$")) {
   # Only load GenomicRanges if the string searched is a range
   suppressPackageStartupMessages(library(GenomicRanges))
