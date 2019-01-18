@@ -1,23 +1,18 @@
-#!/usr/bin/env Rscript
-library(rjson)
+#!/usr/bin/Rscript
 library(optparse)
-suppressPackageStartupMessages(library(GenomicRanges))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(tibble))
+suppressPackageStartupMessages(library(readr))
+suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(igraph))
-suppressPackageStartupMessages(library(tidyverse))
 
 source("./network_generator_lib.R")
 
-# OptParse
-# Differents examples of parameters
-# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt")
-# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317", "--expand", "20000")
-# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317")
-# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "6:52155590-52158317", "--nearest")
-#args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa1")
-# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "C10orf54")
-# args <- c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa13")
-
 args <- commandArgs(trailingOnly = TRUE)
+# args <- parser_arguments(args = c('--search', '1_173143867'))
+# args <- parser_arguments(args = c('--search', '6:52155590-52158317'))
+# args <- parser_arguments(args = c('--search', 'asdfasdfa'))
+# args <- parser_arguments(args = c('--search', 'Hoxa1'))
 args <- parser_arguments(args)
 
 # Load PCHiC
@@ -28,12 +23,12 @@ chrs <-
   ))
 
 # Filter by threshold
-chrs_wt <- chrs[chrs$mESC_wt > args$wt_threshold,]
+chrs_wt <- chrs[chrs$mESC_wt > args$wt_threshold, ]
 
 # Filter by chromosome
 if (!is.null(args$chromosome)) {
   chrs_wt <- chrs_wt[which(chrs_wt$baitChr == args$chromosome
-                           & chrs_wt$oeChr == args$chromosome),]
+  & chrs_wt$oeChr == args$chromosome), ]
 }
 
 ## ------------------------------------------------------------------------
@@ -93,22 +88,32 @@ curated_chrs_edges <- tibble(source = baits, target = oes)
 net <-
   graph_from_data_frame(curated_chrs_edges, directed = F, curated_chrs_vertex)
 
+if (str_detect(args$search, "((1?[0-9])|([XY])):\\d+(-\\d+)?$")) {
+  # Only load GenomicRanges if the string searched is a range
+  suppressPackageStartupMessages(library(GenomicRanges))
+}
 
 # Search the required subnetwork
 required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net, curated_chrs_vertex)
 
 # Convert the required subnetwork to Cytoscape Json format
-required_subnet_json <- generate_cytoscape_json(required_subnet)
-cat(required_subnet_json)
+if (is.null(required_subnet)) {
+  cat("{}")
+} else {
+  library(rjson)
+  # Convert the required subnetwork to Cytoscape Json format
+  required_subnet_json <- generate_cytoscape_json(required_subnet)
+  cat(required_subnet_json)
+}
 
 # save(net, curated_chrs_vertex, file = 'garnet.Rdata', compress = F)
 
 # Plotting example
-#plot(
+# plot(
 #  required_subnet,
 #  vertex.label = V(required_subnet)$curated_gene_name,
 #  vertex.size = 25 + 2 * degree(required_subnet),
 #  vertex.color = c("gray", "lightgreen")[1 + V(required_subnet)$EZH2],
 #  vertex.shape = ifelse(V(required_subnet)$type == "bait", "square", "circle"),
 #  edge.color = "black"
-#)
+# )
