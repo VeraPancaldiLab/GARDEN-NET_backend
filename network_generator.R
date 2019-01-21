@@ -9,10 +9,10 @@ suppressPackageStartupMessages(library(igraph))
 source("./network_generator_lib.R")
 
 args <- commandArgs(trailingOnly = TRUE)
-# args <- parser_arguments(args = c('--search', '1_173143867'))
-# args <- parser_arguments(args = c('--search', '6:52155590-52158317'))
-# args <- parser_arguments(args = c('--search', 'asdfasdfa'))
-# args <- parser_arguments(args = c('--search', 'Hoxa1'))
+# args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "1_173143867"))
+# args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "6:52155590-52158317"))
+# args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "asdfasdfa"))
+#args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa1"))
 args <- parser_arguments(args)
 
 # Load PCHiC
@@ -46,6 +46,8 @@ start <- c(chrs_wt$baitStart, chrs_wt$oeStart)
 end <- c(chrs_wt$baitEnd, chrs_wt$oeEnd)
 curated_chrs_vertex <-
   distinct(tibble(fragment, gene_names, chr, start, end))
+# Only use lowercase in gene names
+curated_chrs_vertex$gene_names <- str_to_lower(curated_chrs_vertex$gene_names)
 # Only use the first name
 curated_gene_name <-
   str_split_fixed(curated_chrs_vertex$gene_names, ",", n = 2)[, 1]
@@ -109,7 +111,7 @@ if (is.null(required_subnet)) {
   cat(required_subnet_json)
 }
 
-# save(net, curated_chrs_vertex, file = 'garnet.Rdata', compress = F)
+#save(net, curated_chrs_vertex, file = 'garnet.Rdata', compress = F)
 
 # Plotting example
 # plot(
