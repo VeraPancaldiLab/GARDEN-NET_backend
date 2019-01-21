@@ -46,6 +46,8 @@ search_vertex_by_name <-
         make_ego_graph(net, nodes = required_vertex)[[1]]
       return(required_subnet)
     } else {
+      # Always search in lowercase
+      vertex <- str_to_lower(vertex)
       if (!vertex %in% curated_chrs_vertex$curated_gene_name) {
         return(NULL)
       }
@@ -119,6 +121,10 @@ search_subnetwork <- function(search, expand, nearest, net, curated_chrs_vertex)
     } else {
       required_subnet <-
         search_vertex_by_name(search, net, curated_chrs_vertex)
+    }
+    if (!is.null(required_subnet)) {
+      # Always recalculate degrees for each neighborhood
+      V(required_subnet)$degree <- degree(required_subnet)
     }
   } else {
     required_subnet <- net
