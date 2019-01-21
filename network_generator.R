@@ -12,7 +12,7 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "1_173143867"))
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "6:52155590-52158317"))
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "asdfasdfa"))
-#args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa1"))
+# args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt", "--search", "Hoxa1"))
 args <- parser_arguments(args)
 
 # Load PCHiC
@@ -93,13 +93,17 @@ net <-
 # Add additional network metadata
 V(net)$degree <- degree(net)
 
-if (str_detect(args$search, "((1?[0-9])|([XY])):\\d+(-\\d+)?$")) {
-  # Only load GenomicRanges if the string searched is a range
-  suppressPackageStartupMessages(library(GenomicRanges))
-}
-
 # Search the required subnetwork
-required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net, curated_chrs_vertex)
+if (!is.null(args$search)) {
+  if (str_detect(args$search, "((1?[0-9])|([XY])):\\d+(-\\d+)?$")) {
+    # Only load GenomicRanges if the string searched is a range
+    suppressPackageStartupMessages(library(GenomicRanges))
+  }
+
+  required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net, curated_chrs_vertex)
+} else {
+  required_subnet <- net
+}
 
 # Convert the required subnetwork to Cytoscape Json format
 if (is.null(required_subnet)) {
@@ -111,7 +115,7 @@ if (is.null(required_subnet)) {
   cat(required_subnet_json)
 }
 
-#save(net, curated_chrs_vertex, file = 'garnet.Rdata', compress = F)
+# save(net, curated_chrs_vertex, file = 'garnet.Rdata', compress = F)
 
 # Plotting example
 # plot(
