@@ -91,7 +91,7 @@ net <-
   graph_from_data_frame(curated_chrs_edges, directed = F, curated_chrs_vertex)
 
 # Add additional network metadata
-V(net)$degree <- degree(net)
+V(net)$total_degree <- degree(net)
 
 # Search the required subnetwork
 if (!is.null(args$search)) {
