@@ -11,7 +11,7 @@ args <- commandArgs(trailingOnly = TRUE)
 args <- parser_arguments(args)
 
 # Load Rdata
-load("garnet.Rdata")
+load("GARDEN-NET.Rdata")
 
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(tibble))

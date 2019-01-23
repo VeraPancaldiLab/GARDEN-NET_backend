@@ -1,11 +1,11 @@
 version: '3'
 services:
   backend:
-    image: cytoscape-utils
+    image: garden-net_utils
     ports:
       - 5000:5000
     volumes:
-      - .:/cytoscape_utils
-    working_dir: /cytoscape_utils
+      - .:/garden-net_utils
+    working_dir: /garden-net_utils
     restart: always
     command: 'gunicorn --workers 9 --bind unix:backend.sock wsgi:app'

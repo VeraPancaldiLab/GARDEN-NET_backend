@@ -1,6 +1,6 @@
-# Cytoscape Utils
+# [GARDEN-NET](https://github.com/VeraPancaldiLab/GARDEN-NET) Utils
 
-Set of utilities and helpers for generating json networks in *cytoscape.js json* format from R dataframes in TSV format
+Set of utilities and helpers for generating json networks in *cytoscape.js json* format from R dataframes to TSV format in [GARDEN-NET](https://github.com/VeraPancaldiLab/GARDEN-NET)
 
 ## network_generator.R
 
@@ -139,11 +139,11 @@ gunicorn --bind 0.0.0.0:5000 wsgi:app
 ## Docker deployment
 ### Build image
 
-docker build -t cytoscape-utils
+docker build -t GARDEN-NET_utils
 
 ### Run container
 #### wsgi<span/>.py development
-`docker run --rm --interactive --tty --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /cytoscape_utils cytoscape-utils sh -c "gunicorn --workers 9 --bind unix:backend.sock wsgi:app"`
+`docker run --rm --interactive --tty --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /GARDEN-NET_utils GARDEN-NET_utils sh -c "gunicorn --workers 9 --bind unix:backend.sock wsgi:app"`
 
 #### wsgi<span/>.py deployment
 docker-compose up -d

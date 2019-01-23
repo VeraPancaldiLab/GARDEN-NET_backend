@@ -115,7 +115,7 @@ if (is.null(required_subnet)) {
   cat(required_subnet_json)
 }
 
-# save(net, curated_chrs_vertex, file = 'garnet.Rdata', compress = F)
+# save(net, curated_chrs_vertex, file = 'GARDEN-NET.Rdata', compress = F)
 
 # Plotting example
 # plot(
