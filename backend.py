@@ -2,12 +2,12 @@ from subprocess import check_output
 from flask import Flask, request, abort
 from flask_cors import CORS
 import shelve
-import re
+#import re
 
 app = Flask(__name__)
 CORS(app)
 
-SANITIZE_PATTERN = re.compile('[^-a-zA-Z0-9:]')
+# SANITIZE_PATTERN = re.compile('[^-a-zA-Z0-9:]')
 
 @app.route("/", defaults={'search': ''})
 @app.route("/")
@@ -45,7 +45,8 @@ def main():
             cmd_list.append("data/Features_mESC.txt")
 
         if search:
-            sanitized_search = SANITIZE_PATTERN.sub('', search.split()[0])
+            #sanitized_search = SANITIZE_PATTERN.sub('', search.split()[0])
+            sanitized_search = search.split()[0]
             cmd_list.append('--search')
             cmd_list.append("'" + sanitized_search + "'")
 
