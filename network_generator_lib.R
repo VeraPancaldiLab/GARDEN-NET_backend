@@ -37,7 +37,9 @@ search_vertex_by_name <-
   function(vertex, net, curated_chrs_vertex) {
     # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
     # Always return NULL if it doesn't exist the vertex in the graph
-    if (str_detect(vertex, "^((1?[0-9])|([XY]))_\\d+$")) {
+    if (str_detect(vertex, "^((1?[0-9])|([XYxy]))_\\d+$")) {
+      # Always use upper case here
+      vertex <- str_to_upper(vertex)
       if (!vertex %in% curated_chrs_vertex$fragment) {
         return(NULL)
       }
