@@ -110,12 +110,20 @@ if (is.null(required_subnet)) {
   cat("{}")
 } else {
   library(rjson)
+  # Generate gene name list
+  curated_gene_name_list <- sort(unique(curated_chrs_vertex$curated_gene_name))
+  if (curated_gene_name_list[1] == "") {
+    curated_gene_name_list <- curated_gene_name_list[-1]
+  }
+  write(toJSON(sort(unique(curated_gene_name_list))), file = "suggestions.json")
+  
   # Convert the required subnetwork to Cytoscape Json format
   required_subnet_json <- generate_cytoscape_json(required_subnet)
   cat(required_subnet_json)
 }
 
-# save(net, curated_chrs_vertex, file = 'GARDEN-NET.Rdata', compress = F)
+# Generate Rdata file
+save(net, curated_chrs_vertex, file = 'GARDEN-NET.Rdata', compress = F)
 
 # Plotting example
 # plot(
