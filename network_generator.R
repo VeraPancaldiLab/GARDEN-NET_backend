@@ -19,7 +19,7 @@ args <- parser_arguments(args)
 chrs <-
   suppressMessages(read_tsv(
     file = args$PCHiC,
-    col_types = cols(baitChr = col_character())
+    col_types = cols(baitChr = col_character(), oeChr = col_character())
   ))
 
 # Filter by threshold
