@@ -23,8 +23,7 @@ chrs <-
   ))
 
 # Filter by threshold
-chrs_wt <- chrs[chrs$mESC_wt > args$wt_threshold, ]
-
+chrs_wt <- chrs[chrs[12] > args$wt_threshold, ]
 # Filter by chromosome
 if (!is.null(args$chromosome)) {
   chrs_wt <- chrs_wt[which(chrs_wt$baitChr == args$chromosome
