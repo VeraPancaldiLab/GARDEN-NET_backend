@@ -58,7 +58,7 @@ def main():
             cmd_list.append(expand)
 
         other_cmd = []
-        other_cmd.append(r"sed -e 's/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/'")
+        other_cmd.append(r"sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/'")
         other_cmd.append('./layout_enricher/layout_enricher')
         other_cmd.append('jq --compact-output .')
 
