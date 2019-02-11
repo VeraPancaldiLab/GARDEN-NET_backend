@@ -94,7 +94,7 @@ V(net)$total_degree <- degree(net)
 
 # Search the required subnetwork
 if (!is.null(args$search)) {
-  if (str_detect(args$search, "((1?[0-9])|([XY])):\\d+(-\\d+)?$")) {
+  if (str_detect(args$search, "((1?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
     # Only load GenomicRanges if the string searched is a range
     suppressPackageStartupMessages(library(GenomicRanges))
   }
@@ -122,7 +122,7 @@ if (is.null(required_subnet)) {
 }
 
 # Generate Rdata file
-save(net, curated_chrs_vertex, file = 'GARDEN-NET.Rdata', compress = F)
+# save(net, curated_chrs_vertex, file = 'GARDEN-NET.Rdata', compress = F)
 
 # Plotting example
 # plot(

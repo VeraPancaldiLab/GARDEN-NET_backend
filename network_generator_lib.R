@@ -116,7 +116,7 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
 ## Generate required subnetwork
 search_subnetwork <- function(search, expand, nearest, net, curated_chrs_vertex) {
   if (!is.null(args$search)) {
-    if (str_detect(args$search, "((1?[0-9])|([XY])):\\d+(-\\d+)?$")) {
+    if (str_detect(args$search, "((1?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
       # We are working with a range
       required_subnet <-
         search_vertex_by_range(search, expand, nearest, net, curated_chrs_vertex)
