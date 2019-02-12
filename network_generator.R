@@ -43,17 +43,19 @@ gene_names <- c(chrs_wt$baitName, chrs_wt$oeName)
 chr <- c(chrs_wt$baitChr, chrs_wt$oeChr)
 start <- c(chrs_wt$baitStart, chrs_wt$oeStart)
 end <- c(chrs_wt$baitEnd, chrs_wt$oeEnd)
+# Only use lowercase in gene names
+gene_names <- str_to_lower(gene_names)
+# Uniform "." and NA name to empty strings
+gene_names <-
+  ifelse(gene_names == "." | is.na(gene_names), "", gene_names)
+# Remove duplicated vertex
 curated_chrs_vertex <-
   distinct(tibble(fragment, gene_names, chr, start, end))
-# Only use lowercase in gene names
-curated_chrs_vertex$gene_names <- str_to_lower(curated_chrs_vertex$gene_names)
 # Only use the first name
 curated_gene_name <-
   str_split_fixed(curated_chrs_vertex$gene_names, ",", n = 2)[, 1]
 # Remove from the last dash to the end of the name
 curated_gene_name <- str_replace(curated_gene_name, "-[^-]+$", "")
-curated_gene_name <-
-  ifelse(curated_gene_name != ".", curated_gene_name, "")
 curated_chrs_vertex <-
   mutate(curated_chrs_vertex, curated_gene_name)
 # Add gene names in array form splitted by ,
@@ -65,7 +67,7 @@ curated_chrs_vertex$gene_list <-
 baits <- paste(chrs_wt$baitChr, chrs_wt$baitStart, sep = "_")
 curated_chrs_vertex$type <-
   ifelse(curated_chrs_vertex$fragment %in% baits, "bait", "oe")
-# Finally all all features to their corresponding fragments
+# Finally add all features to their corresponding fragments
 # Load the features
 if (!is.null(args$features)) {
   features <-
