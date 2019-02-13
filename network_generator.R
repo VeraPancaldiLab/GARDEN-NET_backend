@@ -76,6 +76,9 @@ if (!is.null(args$features)) {
   features$fragment <- str_sub(features$fragment, start = 4)
   # Binarize all the features
   if (!args$no_features_binarization) {
+    if ("V2" %in% colnames(features)) {
+      features["V2"] <- ifelse(features["V2"] <= 0.5, 0, 1)
+    }
     features[, -1] <- ifelse(features[, -1] == 0.0, 0, 1)
   }
   curated_chrs_vertex <-
