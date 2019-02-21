@@ -30,6 +30,14 @@ parser_arguments <- function(args) {
     default = 0,
     help = "Number of bases to expand the search by range"
   )
+  parser <- add_option(parser, "--pipeline",
+    metavar = "folder",
+    help = "Run the pipeline mode:
+            \t\tIt generates the folder structure datasets/Organism/Cell_type\n
+            \t\tIt takes the PCHiC file Organism_Cell_type.PCHiC and the features file Organism_Cell_type.features if exists\n
+            \t\tThe metadata files: datasets/Organism/Cell_type/{search.Rdata, suggestions.json, features.json}\n
+            \t\tThe chromosomes: datasets/Organism/Cell_type/chromosomes/chrNN.json (according to the organisms Homo_sapiens and Mus_musculus)"
+  )
   return(parse_args(parser, args, convert_hyphens_to_underscores = T))
 }
 ## ------------------------------------------------------------------------
@@ -173,4 +181,97 @@ generate_cytoscape_json <- function(required_subnet) {
   # Write JSON dataframe to a file
   # write_lines(toJSON(JSON_df, indent = 2), 'neighboord.json')
   return(toJSON(JSON_df, indent = 2))
+}
+
+# Load PCHiC
+load_PCHiC <- function(PCHiC_file) {
+  suppressMessages(read_tsv(
+    file = args$PCHiC,
+    col_types = cols(baitChr = col_character(), oeChr = col_character())
+  ))
+}
+
+# Filter by threshold (column 12)
+filter_by_threshold <- function(PCHiC, threshold) {
+  PCHiC[PCHiC[12] > threshold, ]
+}
+
+# Filter by chromosome
+filter_by_chromosome <- function(PCHiC, chromosome) {
+  PCHiC[which(PCHiC$baitChr == chromosome
+  | PCHiC$oeChr == chromosome), ]
+}
+
+# Generate vertex from a PCHiC file
+generate_vertex <- function(PCHiC) {
+  ## ------------------------------------------------------------------------
+  # Join chr number with the start position
+  # Also join bait and oe in the same column
+  fragment <- c(
+    paste(PCHiC$baitChr, PCHiC$baitStart, sep = "_"),
+    paste(PCHiC$oeChr, PCHiC$oeStart, sep = "_")
+  )
+  # Extract bait and oe names and join them to the same column
+  gene_names <- c(PCHiC$baitName, PCHiC$oeName)
+  # Remove repeted nodes
+  chr <- c(PCHiC$baitChr, PCHiC$oeChr)
+  start <- c(PCHiC$baitStart, PCHiC$oeStart)
+  end <- c(PCHiC$baitEnd, PCHiC$oeEnd)
+  # Only use lowercase in gene names
+  gene_names <- str_to_lower(gene_names)
+  # Uniform "." and NA name to empty strings
+  gene_names <-
+    ifelse(gene_names == "." | is.na(gene_names), "", gene_names)
+  # Remove duplicated vertex
+  curated_PCHiC_vertex <-
+    distinct(tibble(fragment, gene_names, chr, start, end))
+  # Only use the first name
+  curated_gene_name <-
+    str_split_fixed(curated_PCHiC_vertex$gene_names, ",", n = 2)[, 1]
+  # Remove from the last dash to the end of the name
+  curated_gene_name <- str_replace(curated_gene_name, "-[^-]+$", "")
+  curated_PCHiC_vertex <-
+    mutate(curated_PCHiC_vertex, curated_gene_name)
+  # Add gene names in array form splitted by ,
+  curated_PCHiC_vertex$gene_list <-
+    str_split(curated_PCHiC_vertex$gene_names, ",")
+  # Add the type for bait and oes
+  # Be careful because in the oe column there are many baits
+  # So oe is only oe if it not exist in the bait column
+  baits <- paste(PCHiC$baitChr, PCHiC$baitStart, sep = "_")
+  curated_PCHiC_vertex$type <-
+    ifelse(curated_PCHiC_vertex$fragment %in% baits, "bait", "oe")
+  curated_PCHiC_vertex
+}
+
+# Load the features
+generate_features <- function(features_file) {
+  features <-
+    suppressMessages(read_tsv(file = features_file))
+  # Remove chr prefix from the fragment column
+  features$fragment <- str_sub(features$fragment, start = 4)
+  # Binarize all the features
+  if (!args$no_features_binarization) {
+    if ("V2" %in% colnames(features)) {
+      features["V2"] <- ifelse(features["V2"] <= 0.5, 0, 1)
+    }
+    features[, -1] <- ifelse(features[, -1] == 0.0, 0, 1)
+  }
+  left_join(curated_PCHiC_vertex, features, by = "fragment")
+}
+
+# Generate a dataframe with the extremes of the edges
+generate_edges <- function(PCHiC) {
+  baits <- paste(PCHiC$baitChr, PCHiC$baitStart, sep = "_")
+  oes <- paste(PCHiC$oeChr, PCHiC$oeStart, sep = "_")
+  tibble(source = baits, target = oes)
+}
+
+# Generate gene name list
+generate_suggestions <- function(curated_gene_name_list) {
+  curated_gene_name_list <- sort(unique(curated_gene_name_list))
+  if (curated_gene_name_list[1] == "") {
+    curated_gene_name_list <- curated_gene_name_list[-1]
+  }
+  write(toJSON(sort(unique(curated_gene_name_list))), file = "suggestions.json")
 }
