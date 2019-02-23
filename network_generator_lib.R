@@ -33,10 +33,16 @@ parser_arguments <- function(args) {
   parser <- add_option(parser, "--pipeline",
     metavar = "folder",
     help = "Run the pipeline mode:
-            \t\tIt generates the folder structure datasets/Organism/Cell_type\n
-            \t\tIt takes the PCHiC file Organism_Cell_type.PCHiC and the features file Organism_Cell_type.features if exists\n
-            \t\tThe metadata files: datasets/Organism/Cell_type/{search.Rdata, suggestions.json, features.json}\n
-            \t\tThe chromosomes: datasets/Organism/Cell_type/chromosomes/chrNN.json (according to the organisms Homo_sapiens and Mus_musculus)"
+                       \t\tIt generates the folder structure datasets/Organism/Cell_type\n
+                       \t\tIt takes the PCHiC file Organism_Cell_type.PCHiC and the features file Organism_Cell_type.features if exists\n
+                       \t\tThe metadata files: datasets/Organism/Cell_type/{search.Rdata, suggestions.json, features.json}\n
+                       \t\tThe chromosomes: datasets/Organism/Cell_type/chromosomes/chrNN.json (according to the organisms Homo_sapiens and Mus_musculus)"
+  )
+  parser <- add_option(parser, "--organism",
+    help = "Select an organism, only for searcher_query.R"
+  )
+  parser <- add_option(parser, "--cell_type",
+    help = "Select a cell_type, only for searcher_query.R"
   )
   return(parse_args(parser, args, convert_hyphens_to_underscores = T))
 }
@@ -45,7 +51,7 @@ search_vertex_by_name <-
   function(vertex, net, curated_chrs_vertex) {
     # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
     # Always return NULL if it doesn't exist the vertex in the graph
-    if (str_detect(vertex, "^((1?[0-9])|([XYxy]))_\\d+$")) {
+    if (str_detect(vertex, "^(([12]?[0-9])|([XYxy]))_\\d+$")) {
       # Always use upper case here
       vertex <- str_to_upper(vertex)
       if (!vertex %in% curated_chrs_vertex$fragment) {
@@ -124,7 +130,7 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
 ## Generate required subnetwork
 search_subnetwork <- function(search, expand, nearest, net, curated_chrs_vertex) {
   if (!is.null(args$search)) {
-    if (str_detect(args$search, "((1?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
+    if (str_detect(args$search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
       # We are working with a range
       required_subnet <-
         search_vertex_by_range(search, expand, nearest, net, curated_chrs_vertex)
