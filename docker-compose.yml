@@ -6,6 +6,7 @@ services:
       - 5000:5000
     volumes:
       - .:/garden-net_utils
+      - ../garden-net/data:/garden-net_utils/data
     working_dir: /garden-net_utils
     restart: always
     command: 'gunicorn --workers 9 --bind unix:backend.sock wsgi:app'
