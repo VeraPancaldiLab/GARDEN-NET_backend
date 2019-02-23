@@ -12,50 +12,41 @@ CORS(app)
 @app.route("/", defaults={'search': ''})
 @app.route("/")
 def main():
-    expand   = request.args.get('expand')
-    features = request.args.get('features')
-    nearest  = request.args.get('nearest')
     search   = request.args.get('search')
+    organism = request.args.get('organism')
+    cell_type = request.args.get('cell_type')
 
     # Open or create a simple cache
     shelve_cache = shelve.open('.shelve_cache')
 
     # Valid URLs:
     #   '127.0.0.1:5000/'
-    #   '127.0.0.1:5000/?features'
-    #   '127.0.0.1:5000/?search=Y_581553'
-    #   '127.0.0.1:5000/?search=Y_581553&features'
-    #   '127.0.0.1:5000/?search=Hoxa1'
-    #   '127.0.0.1:5000/?search=Hoxa1&features'
-    #   '127.0.0.1:5000/?search=6:52155590-52158317'
-    #   '127.0.0.1:5000/?search=6:52155590-52158317&nearest'
-    #   '127.0.0.1:5000/?search=6:52155590-52158317&expand=20000'
+    #   '127.0.0.1:5000/?organism=Mus_musculus&cell_type=Embryonic_stem_cells&features'
+    #   '127.0.0.1:5000/?organism=Mus_musculus&cell_type=Embryonic_stem_cells&search=Y_581553'
+    #   '127.0.0.1:5000/?organism=Mus_musculus&cell_type=Embryonic_stem_cells&search=Y_581553&features'
+    #   '127.0.0.1:5000/?organism=Mus_musculus&cell_type=Embryonic_stem_cells&search=Hoxa1'
+    #   '127.0.0.1:5000/?organism=Mus_musculus&cell_type=Embryonic_stem_cells&search=Hoxa1&features'
+    #   '127.0.0.1:5000/?organism=Mus_musculus&cell_type=Embryonic_stem_cells&search=6:52155590-52158317'
+    #   '127.0.0.1:5000/?organism=Mus_musculus&cell_type=Embryonic_stem_cells&search=6:52155590-52158317&nearest'
+    #   '127.0.0.1:5000/?organism=Mus_musculus&cell_type=Embryonic_stem_cells&search=6:52155590-52158317&expand=20000'
 
     # Generate the keys for the cache
-    nearest_key  = nearest if nearest is not None else ''
-    features_key = features if features is not None else ''
-    expand_key   = expand if expand is not None else ''
-    key = '|'.join([search, features_key, nearest_key, expand_key])
+
+    key = '|'.join([search, organism, cell_type])
 
     if  key not in shelve_cache:
-        cmd_list = ["./search_query.R --PCHiC data/PCHiC_interaction_map.txt"]
-
-        if features is not None:
-            cmd_list.append("--features")
-            cmd_list.append("data/Features_mESC.txt")
+        cmd_list = ["./search_query.R"]
 
         if search:
             #sanitized_search = SANITIZE_PATTERN.sub('', search.split()[0])
             sanitized_search = search.split()[0]
-            cmd_list.append('--search')
-            cmd_list.append("'" + sanitized_search + "'")
+            cmd_list.append('--search=' + "'" + sanitized_search + "'")
 
-        if nearest is not None:
-            cmd_list.append('--nearest')
+        if organism:
+            cmd_list.append('--organism=' + organism)
 
-        if expand:
-            cmd_list.append('--expand')
-            cmd_list.append(expand)
+        if cell_type:
+            cmd_list.append('--cell_type=' + cell_type)
 
         other_cmd = []
         other_cmd.append(r"sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/'")
