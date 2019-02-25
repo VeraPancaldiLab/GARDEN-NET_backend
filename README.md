@@ -43,7 +43,22 @@ Options:
                 Search the nearest range
 
         --expand=EXPAND
-                Number of bases to expand the search by ran
+                Number of bases to expand the search by range
+        --pipeline=FOLDER
+                Run the pipeline mode:
+                                It generates the folder structure datasets/Organism/Cell_type
+
+                                It takes the PCHiC file Organism_Cell_type.PCHiC and the features file Organism_Cell_type.features if exists
+
+                                The metadata files: datasets/Organism/Cell_type/{search.Rdata, suggestions.json, features.json}
+
+                                The chromosomes: datasets/Organism/Cell_type/chromosomes/chrNN.json (according to the organisms Homo_sapiens and Mus_musculus)
+
+        --organism=ORGANISM
+                Select an organism, only for searcher_query.R
+
+        --cell_type=CELL_TYPE
+                Select a cell_type, only for searcher_query.R
 ```
 ## layout_enricher
 
@@ -99,7 +114,7 @@ optional arguments:
                         Cytoscape layout
 ```
 
-## Pipeline
+## Usage
 ### Dependencies
   - [Cytoscape](https://cytoscape.org/)
   - [GNU parallel](https://www.gnu.org/software/parallel)
@@ -124,6 +139,16 @@ optional arguments:
 `cytoscape -R 1234 &`
 
 `parallel --eta ./network_generator.R "--PCHiC PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher -f png -d chromosomes/chr{}" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
+
+## Pipeline
+`./pipeline.sh input_folder output_folder`
+
+All files in input_folder need to have the next format:
+- Organism-Cell_type.tsv
+- Organism-Cell_type.features
+
+Only Mus_musculus and Homo_sapiens are implemented by know
+
 
 ## backend.<span/>py
 Backend for the [network_generator.R](network_generator.R) script
