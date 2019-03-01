@@ -13,7 +13,8 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "6:52155590-52158317"))
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "asdfasdfa"))
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC_ALL.tsv", "--search", "Hoxa1"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "2"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
 args <- parser_arguments(args)
 
 PCHiC <- load_PCHiC(args$PCHiC)
@@ -66,38 +67,56 @@ if (is.null(required_subnet)) {
     } else {
       features <- list()
     }
-    # Generate search.Rdata
-    if (!is.null(args$chromosome)) {
-      # Generate again all the network but without removing by chromosome
-      PCHiC <- load_PCHiC(args$PCHiC)
-      PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
-      curated_PCHiC_vertex <- generate_vertex(PCHiC)
-      if (!is.null(args$features)) {
-        curated_PCHiC_vertex <- generate_features(args$features)
-      }
-      curated_PCHiC_edges <- generate_edges(PCHiC)
-      net <-
-        graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
-      V(net)$total_degree <- degree(net)
 
+    # Generate graph metadata
+    graph_metadata <- generate_graph_metadata(net)
+
+    # Prepare folder structure
+    output_folder <- args$pipeline
+    # First extract the filename from the path and then remove the suffix
+    filename <- str_remove(basename(args$PCHiC), "\\..+$")
+    organism <- str_split(filename, "-")[[1]][1]
+    cell_type <- str_split(filename, "-")[[1]][2]
+
+    # Save  graph metadata
+    if(!is.null(args$chromosome)) {
+      write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata", paste0("chr", args$chromosome, ".json")))
+    } else {
+      write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata.json"))
+    }
+
+    if (!file.exists(file.path(output_folder, organism, cell_type, "search_cache.Rdata"))) {
+      if (!is.null(args$chromosome)) {
+        # Generate again all the network but without removing by chromosome
+        PCHiC <- load_PCHiC(args$PCHiC)
+        PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
+        curated_PCHiC_vertex <- generate_vertex(PCHiC)
+        if (!is.null(args$features)) {
+          curated_PCHiC_vertex <- generate_features(args$features)
+        }
+        curated_PCHiC_edges <- generate_edges(PCHiC)
+        net <-
+          graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
+        V(net)$total_degree <- degree(net)
+      }
       # Generate chromosomes
       chromosomes <- unique(curated_PCHiC_vertex$chr)
       # Remove MT mouse chromosome
       chromosomes <- str_sort(chromosomes[-which(chromosomes == "MT")], numeric = T)
 
-      # Prepare folder structure
-      output_folder <- args$pipeline
-      # First extract the filename from the path and then remove the suffix
-      filename <- str_remove(basename(args$PCHiC), "\\..+$")
-      organism <- str_split(filename, "-")[[1]][1]
-      cell_type <- str_split(filename, "-")[[1]][2]
+      # Generate suggestions
+      suggestions <- generate_suggestions(net)
+
+      # Save all metadata to their folders
+      # Save suggestions
+      write(toJSON(suggestions), file = file.path(output_folder, organism, cell_type, "suggestions.json"))
+      # Save chromosomes
+      write(toJSON(chromosomes), file = file.path(output_folder, organism, "chromosomes.json"))
+      # Save features
+      write(toJSON(features), file = file.path(output_folder, organism, cell_type, "features.json"))
+      # Save search cache
+      save(net, curated_PCHiC_vertex, file = file.path(output_folder, organism, cell_type, "search_cache.Rdata"), compress = F)
     }
-    # Save all metadata to their folders
-    # Save chromosomes
-    write(toJSON(chromosomes), file = file.path(output_folder, organism, "chromosomes.json"))
-    # Save features
-    write(toJSON(features), file = file.path(output_folder, organism, cell_type, "features.json"))
-    save(net, curated_PCHiC_vertex, file = file.path(output_folder, organism, cell_type, "search_cache.Rdata"), compress = F)
   }
   # Convert the required subnetwork to Cytoscape Json format
   required_subnet_json <- generate_cytoscape_json(required_subnet)

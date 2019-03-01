@@ -89,6 +89,7 @@ nearest_subnetwork <- function(required_range, net, curated_chrs_vertex_ranges) 
   }
   return(required_subnet)
 }
+
 search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_vertex) {
   curated_chrs_vertex_ranges <-
     makeGRangesFromDataFrame(
@@ -270,14 +271,51 @@ generate_features <- function(features_file) {
 generate_edges <- function(PCHiC) {
   baits <- paste(PCHiC$baitChr, PCHiC$baitStart, sep = "_")
   oes <- paste(PCHiC$oeChr, PCHiC$oeStart, sep = "_")
-  tibble(source = baits, target = oes)
+  curated_PCHiC_edges <- tibble(source = baits, target = oes)
+  curated_PCHiC_edges$type <- paste("P", ifelse(curated_PCHiC_edges$target %in% curated_PCHiC_edges$source, "P", "O"), sep = "-")
+  curated_PCHiC_edges
 }
 
 # Generate gene name list
-generate_suggestions <- function(curated_gene_name_list) {
+generate_suggestions <- function(net) {
+  curated_gene_name_list <- V(net)$curated_gene_name
   curated_gene_name_list <- sort(unique(curated_gene_name_list))
   if (curated_gene_name_list[1] == "") {
     curated_gene_name_list <- curated_gene_name_list[-1]
   }
-  write(toJSON(sort(unique(curated_gene_name_list))), file = "suggestions.json")
+  suggestions <- sort(unique(curated_gene_name_list))
+  suggestions
+}
+
+generate_graph_metadata <- function(net) {
+    nodes <- length(V(net))
+    degree_average <- round(mean(degree(net)), 2)
+    edges <- length(E(net))
+    connected_components <- components(net)$no
+    largest_connected_component <- sort(components(net)$csize, decreasing = T)[1]
+    nodes_in_largest_connected_component <- paste0(round(largest_connected_component / nodes * 100, 2), "%")
+    network_diameter <- diameter(net)
+    promoters <- sum(V(net)$type == "bait")
+    other_ends <- sum(V(net)$type == "oe")
+    PP_edges <- sum(E(net)$type == "P-P")
+    PO_edges <- sum(E(net)$type == "P-O")
+    edge_ends <- ends(net, E(net))
+    edge_ends_source <- edge_ends[, 1]
+    edge_ends_target <- edge_ends[, 2]
+    edge_ends_source_chromosome <- unname(sapply(edge_ends_source, function(edge_end_source) {str_split(edge_end_source, "_")[[1]][1]}))
+    edge_ends_target_chromosome <- unname(sapply(edge_ends_target, function(edge_end_target) {str_split(edge_end_target, "_")[[1]][1]}))
+    interchromosomal_interactions <- sum(edge_ends_source_chromosome != edge_ends_target_chromosome)
+    clustering_coefficient <- round(transitivity(net), 2)
+
+    network_properties <- list(Nodes = nodes, Edges = edges, Promoters = promoters,
+                               "Other ends" = other_ends, "PP edges" = PP_edges, "PO edges" = PO_edges,
+                               "Interchromosomal interactions" = interchromosomal_interactions)
+
+    network_statistics <- list("Degree average" = degree_average, "Connected components (CC)" = connected_components,
+                               "Nodes in largest CC" = nodes_in_largest_connected_component,
+                               "Network diameter" = network_diameter, "Clustering coefficient" = clustering_coefficient)
+
+    graph_metadata <- list(network_properties = network_properties, network_statistics = network_statistics)
+
+    graph_metadata
 }
