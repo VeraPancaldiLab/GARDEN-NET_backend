@@ -141,7 +141,9 @@ optional arguments:
 `parallel --eta ./network_generator.R "--PCHiC PCHiC_interaction_map.txt --chromosome {} --features Features_mESC.txt | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher -f png -d chromosomes/chr{}" ::: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 X Y`
 
 ## Pipeline
-`./pipeline.sh input_folder output_folder`
+`Usage: ./pipeline.sh [-m] -i input_folder [-o output_folder]`
+
+(-m is the flag for generating only metadata)
 
 All files in input_folder need to have the next format:
 - Organism-Cell_type.tsv
