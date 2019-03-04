@@ -45,13 +45,13 @@ for file in $(realpath "$input"/*); do
       # Remove from the beggining all characters until the last dash
       cell_type=${filename##*-}
       # Default output_folder . if there is not a second input parameter
-      output_folder=$(realpath ${output:-GARDEN-NET_DATA})
+      output_folder=$(realpath "${output:-GARDEN-NET_DATA}")
       mkdir -p "$output_folder/$organism/$cell_type/"{chromosomes,metadata}
       echo "${file##*/}:"
       # Generate chromosomes sequence
       chromosomes_seq_string="$(seq --separator ' ' 1 ${chromosomes_initial_number[$organism]}) X Y"
       # Size of the chromosomes sequence
-      chromosomes_seq_size="$(wc -w <<< $chromosomes_seq_string)"
+      chromosomes_seq_size=$(wc -w <<< "$chromosomes_seq_string")
       printf "\t%s - %s\n" "$organism" "$cell_type"
       printf "\t%s chromosomes: %s\n" "$chromosomes_seq_size" "$chromosomes_seq_string"
       # Obtein features file using which has the same filename but with .features extension
@@ -65,10 +65,13 @@ for file in $(realpath "$input"/*); do
       fi
       echo
       if ! $only_metadata; then
+        # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
+        # shellcheck disable=SC2086
         parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --monochrome-output --compact-output .elements > $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string
       else
-        # Only remove chromosomes folder if this is empty
-        rmdir "$output_folder/$organism/$cell_type/chromosomes" 2> /dev/null || true
+        rmdir "$output_folder/$organism/$cell_type/chromosomes" 2> /dev/null
+        # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
+        # shellcheck disable=SC2086
         parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' > /dev/null" ::: $chromosomes_seq_string
       fi
   esac
