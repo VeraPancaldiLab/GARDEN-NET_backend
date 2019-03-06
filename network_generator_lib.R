@@ -44,6 +44,12 @@ parser_arguments <- function(args) {
   parser <- add_option(parser, "--cell_type",
     help = "Select a cell_type, only for searcher_query.R"
   )
+
+  parser <- add_option(parser, "--only_pp_interactions",
+    action = "store_true",
+    default = F,
+    help = "Use only promoter-promoter interactions from the network"
+  )
   return(parse_args(parser, args, convert_hyphens_to_underscores = T))
 }
 ## ------------------------------------------------------------------------
@@ -224,6 +230,14 @@ generate_vertex <- function(PCHiC) {
   chr <- c(PCHiC$baitChr, PCHiC$oeChr)
   start <- c(PCHiC$baitStart, PCHiC$oeStart)
   end <- c(PCHiC$baitEnd, PCHiC$oeEnd)
+  # Type
+  bait_types <- sapply(PCHiC$type, function(type) {
+    str_split(type, fixed("-"))[[1]][1]
+  })
+  oe_types <- sapply(PCHiC$type, function(type) {
+    str_split(type, fixed("-"))[[1]][2]
+  })
+  type <- c(bait_types, oe_types)
   # Only use lowercase in gene names
   gene_names <- str_to_lower(gene_names)
   # Uniform "." and NA name to empty strings
@@ -231,10 +245,10 @@ generate_vertex <- function(PCHiC) {
     ifelse(gene_names == "." | is.na(gene_names), "", gene_names)
   # Remove duplicated vertex
   curated_PCHiC_vertex <-
-    distinct(tibble(fragment, gene_names, chr, start, end))
+    distinct(tibble(fragment, gene_names, chr, start, end, type))
   # Only use the first name
   curated_gene_name <-
-    str_split_fixed(curated_PCHiC_vertex$gene_names, ",", n = 2)[, 1]
+    str_split_fixed(curated_PCHiC_vertex$gene_names, fixed(","), n = 2)[, 1]
   # Remove from the last dash to the end of the name
   curated_gene_name <- str_replace(curated_gene_name, "-[^-]+$", "")
   curated_PCHiC_vertex <-
@@ -242,12 +256,8 @@ generate_vertex <- function(PCHiC) {
   # Add gene names in array form splitted by ,
   curated_PCHiC_vertex$gene_list <-
     str_split(curated_PCHiC_vertex$gene_names, ",")
-  # Add the type for bait and oes
-  # Be careful because in the oe column there are many baits
-  # So oe is only oe if it not exist in the bait column
-  baits <- paste(PCHiC$baitChr, PCHiC$baitStart, sep = "_")
   curated_PCHiC_vertex$type <-
-    ifelse(curated_PCHiC_vertex$fragment %in% baits, "bait", "oe")
+    ifelse(curated_PCHiC_vertex$type == "P", "bait", "oe")
   curated_PCHiC_vertex
 }
 
@@ -271,8 +281,7 @@ generate_features <- function(features_file) {
 generate_edges <- function(PCHiC) {
   baits <- paste(PCHiC$baitChr, PCHiC$baitStart, sep = "_")
   oes <- paste(PCHiC$oeChr, PCHiC$oeStart, sep = "_")
-  curated_PCHiC_edges <- tibble(source = baits, target = oes)
-  curated_PCHiC_edges$type <- paste("P", ifelse(curated_PCHiC_edges$target %in% curated_PCHiC_edges$source, "P", "O"), sep = "-")
+  curated_PCHiC_edges <- tibble(source = baits, target = oes, type = PCHiC$type)
   curated_PCHiC_edges
 }
 
@@ -288,34 +297,52 @@ generate_suggestions <- function(net) {
 }
 
 generate_graph_metadata <- function(net) {
-    nodes <- length(V(net))
-    degree_average <- round(mean(degree(net)), 2)
-    edges <- length(E(net))
-    connected_components <- components(net)$no
-    largest_connected_component <- sort(components(net)$csize, decreasing = T)[1]
-    nodes_in_largest_connected_component <- paste0(round(largest_connected_component / nodes * 100, 2), "%")
-    network_diameter <- diameter(net)
-    promoters <- sum(V(net)$type == "bait")
-    other_ends <- sum(V(net)$type == "oe")
-    PP_edges <- sum(E(net)$type == "P-P")
-    PO_edges <- sum(E(net)$type == "P-O")
-    edge_ends <- ends(net, E(net))
-    edge_ends_source <- edge_ends[, 1]
-    edge_ends_target <- edge_ends[, 2]
-    edge_ends_source_chromosome <- unname(sapply(edge_ends_source, function(edge_end_source) {str_split(edge_end_source, "_")[[1]][1]}))
-    edge_ends_target_chromosome <- unname(sapply(edge_ends_target, function(edge_end_target) {str_split(edge_end_target, "_")[[1]][1]}))
-    interchromosomal_interactions <- sum(edge_ends_source_chromosome != edge_ends_target_chromosome)
-    clustering_coefficient <- round(transitivity(net), 2)
+  nodes <- length(V(net))
+  degree_average <- round(mean(degree(net)), 2)
+  edges <- length(E(net))
+  connected_components <- components(net)$no
+  largest_connected_component <- sort(components(net)$csize, decreasing = T)[1]
+  nodes_in_largest_connected_component <- paste0(round(largest_connected_component / nodes * 100, 2), "%")
+  network_diameter <- diameter(net)
+  promoters <- sum(V(net)$type == "bait")
+  other_ends <- sum(V(net)$type == "oe")
+  PP_edges <- sum(E(net)$type == "P-P")
+  PO_edges <- sum(E(net)$type == "P-O")
+  edge_ends <- ends(net, E(net))
+  edge_ends_source <- edge_ends[, 1]
+  edge_ends_target <- edge_ends[, 2]
+  edge_ends_source_chromosome <- unname(sapply(edge_ends_source, function(edge_end_source) {
+    str_split(edge_end_source, "_")[[1]][1]
+  }))
+  edge_ends_target_chromosome <- unname(sapply(edge_ends_target, function(edge_end_target) {
+    str_split(edge_end_target, "_")[[1]][1]
+  }))
+  interchromosomal_interactions <- sum(edge_ends_source_chromosome != edge_ends_target_chromosome)
+  clustering_coefficient <- round(transitivity(net), 2)
 
-    network_properties <- list(Nodes = nodes, Edges = edges, Promoters = promoters,
-                               "Other ends" = other_ends, "PP edges" = PP_edges, "PO edges" = PO_edges,
-                               "Interchromosomal interactions" = interchromosomal_interactions)
+  network_properties <- list(
+    Nodes = nodes, Edges = edges, Promoters = promoters,
+    "Other ends" = other_ends, "PP edges" = PP_edges, "PO edges" = PO_edges,
+    "Interchromosomal interactions" = interchromosomal_interactions
+  )
 
-    network_statistics <- list("Degree average" = degree_average, "Connected components (CC)" = connected_components,
-                               "Nodes in largest CC" = nodes_in_largest_connected_component,
-                               "Network diameter" = network_diameter, "Clustering coefficient" = clustering_coefficient)
+  network_statistics <- list(
+    "Degree average" = degree_average, "Connected components (CC)" = connected_components,
+    "Nodes in largest CC" = nodes_in_largest_connected_component,
+    "Network diameter" = network_diameter, "Clustering coefficient" = clustering_coefficient
+  )
 
-    graph_metadata <- list(network_properties = network_properties, network_statistics = network_statistics)
+  graph_metadata <- list(network_properties = network_properties, network_statistics = network_statistics)
 
-    graph_metadata
+  graph_metadata
+}
+
+add_PCHiC_types <- function(PCHiC) {
+  # Add the type for bait and oes
+  # Be careful because in the oe column there are many baits
+  # So oe is only oe if it not exist in the bait column
+  baits <- paste(PCHiC$baitChr, PCHiC$baitStart, PCHiC$baitEnd, sep = "_")
+  oes <- paste(PCHiC$oeChr, PCHiC$oeStart, PCHiC$oeEnd, sep = "_")
+  PCHiC$type <- ifelse(oes %in% baits, "P-P", "P-O")
+  PCHiC
 }

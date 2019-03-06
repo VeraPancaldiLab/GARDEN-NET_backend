@@ -8,14 +8,16 @@ set -euo pipefail
 input=""
 output=""
 only_metadata=false
+only_pp_interactions=false
 
-usage() { echo "Usage: $0 [-m] -i input_folder [-o output_folder]" 1>&2; exit 1; }
+usage() { echo "Usage: $0 [-m] [-p] -i input_folder [-o output_folder]" 1>&2; exit 1; }
 
-while getopts ":mi:o:" opts; do
+while getopts ":i:o:mp" opts; do
   case "$opts" in
     i) input=${OPTARG};;
     o) output=${OPTARG};;
-    m) only_metadata=true;; # only generata metadata
+    m) only_metadata=true;; # only generate metadata
+    p) only_pp_interactions=true;; # only generate P-P networks
     *) usage;;
   esac
 done
@@ -64,15 +66,21 @@ for file in $(realpath "$input"/*); do
         printf "\tNo features file found"
       fi
       echo
+
+      only_pp_interactions_parameter=""
+      if $only_pp_interactions; then
+        only_pp_interactions_parameter="--only_pp_interactions"
+      fi
+
       if ! $only_metadata; then
         # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
         # shellcheck disable=SC2086
-        parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --monochrome-output --compact-output .elements > $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string
+        parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $only_pp_interactions_parameter | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --monochrome-output --compact-output .elements > $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string
       else
         rmdir "$output_folder/$organism/$cell_type/chromosomes" 2> /dev/null
         # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
         # shellcheck disable=SC2086
-        parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' > /dev/null" ::: $chromosomes_seq_string
+        parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $only_pp_interactions_parameter | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' > /dev/null" ::: $chromosomes_seq_string
       fi
   esac
 done

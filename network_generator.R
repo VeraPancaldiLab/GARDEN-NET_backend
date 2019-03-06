@@ -14,7 +14,9 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "asdfasdfa"))
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC_ALL.tsv", "--search", "Hoxa1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "2"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--only_pp_interactions"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv", "--chromosome", "1"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "Y", "--only_pp_interactions"))
 args <- parser_arguments(args)
 
 PCHiC <- load_PCHiC(args$PCHiC)
@@ -23,6 +25,18 @@ PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
 
 if (!is.null(args$chromosome)) {
   PCHiC <- filter_by_chromosome(PCHiC, args$chromosome)
+}
+
+PCHiC <- add_PCHiC_types(PCHiC)
+
+if (args$only_pp_interactions) {
+  PCHiC <- PCHiC[PCHiC$type == "P-P", ]
+}
+
+# No promoters promoters interaction network
+if (nrow(PCHiC) == 0) {
+  cat("{}")
+  quit(status = 0)
 }
 
 curated_PCHiC_vertex <- generate_vertex(PCHiC)
@@ -79,7 +93,7 @@ if (is.null(required_subnet)) {
     cell_type <- str_split(filename, "-")[[1]][2]
 
     # Save  graph metadata
-    if(!is.null(args$chromosome)) {
+    if (!is.null(args$chromosome)) {
       write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata", paste0("chr", args$chromosome, ".json")))
     } else {
       write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata.json"))
@@ -90,6 +104,10 @@ if (is.null(required_subnet)) {
         # Generate again all the network but without removing by chromosome
         PCHiC <- load_PCHiC(args$PCHiC)
         PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
+        PCHiC <- add_PCHiC_types(PCHiC)
+        if (args$only_pp_interactions) {
+          PCHiC <- PCHiC[PCHiC$type == "P-P", ]
+        }
         curated_PCHiC_vertex <- generate_vertex(PCHiC)
         if (!is.null(args$features)) {
           curated_PCHiC_vertex <- generate_features(args$features)
