@@ -5,6 +5,7 @@ suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(readr))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(igraph))
+suppressPackageStartupMessages(library(chaser))
 
 source("./network_generator_lib.R")
 
@@ -16,7 +17,8 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "2"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--only_pp_interactions"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv", "--chromosome", "1"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "Y", "--only_pp_interactions"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
+
 args <- parser_arguments(args)
 
 PCHiC <- load_PCHiC(args$PCHiC)
@@ -43,7 +45,7 @@ curated_PCHiC_vertex <- generate_vertex(PCHiC)
 
 # Finally add all features to their corresponding fragments
 if (!is.null(args$features)) {
-  curated_PCHiC_vertex <- generate_features(args$features)
+  curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features)
 }
 
 curated_PCHiC_edges <- generate_edges(PCHiC)
@@ -75,15 +77,6 @@ if (is.null(required_subnet)) {
   library(rjson)
 
   if (!is.null(args$pipeline)) {
-    # Generate features
-    if (!is.null(args$features)) {
-      features <- sort(colnames(curated_PCHiC_vertex[9:length(curated_PCHiC_vertex)]))
-    } else {
-      features <- list()
-    }
-
-    # Generate graph metadata
-    graph_metadata <- generate_graph_metadata(net)
 
     # Prepare folder structure
     output_folder <- args$pipeline
@@ -91,6 +84,9 @@ if (is.null(required_subnet)) {
     filename <- str_remove(basename(args$PCHiC), "\\..+$")
     organism <- str_split(filename, "-")[[1]][1]
     cell_type <- str_split(filename, "-")[[1]][2]
+
+    # Generate graph metadata
+    graph_metadata <- generate_graph_metadata(net)
 
     # Save  graph metadata
     if (!is.null(args$chromosome)) {
@@ -109,8 +105,13 @@ if (is.null(required_subnet)) {
           PCHiC <- PCHiC[PCHiC$type == "P-P", ]
         }
         curated_PCHiC_vertex <- generate_vertex(PCHiC)
+        features <- NULL
         if (!is.null(args$features)) {
-          curated_PCHiC_vertex <- generate_features(args$features)
+          curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex,args$features)
+          # Generate features
+          features <- sort(colnames(curated_PCHiC_vertex[9:length(curated_PCHiC_vertex)]))
+        } else {
+          features <- list()
         }
         curated_PCHiC_edges <- generate_edges(PCHiC)
         net <-
@@ -124,6 +125,18 @@ if (is.null(required_subnet)) {
 
       # Generate suggestions
       suggestions <- generate_suggestions(net)
+
+      # Generate gchas
+      if (!is.null(args$features)) {
+        # All network
+        net_features_metadata <- generate_features_metadata(PCHiC)
+        # PP network only
+        pp_net_features_metadata <- generate_features_metadata(PCHiC[PCHiC$type == "P-P",])
+        # PO network only
+        po_net_features_metadata <- generate_features_metadata(PCHiC[PCHiC$type == "P-O",])
+        features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
+        write(toJSON(features_metadata), file = file.path(output_folder, organism, cell_type, "features_metadata.json"))
+      }
 
       # Save all metadata to their folders
       # Save suggestions

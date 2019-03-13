@@ -24,6 +24,8 @@ RUN Rscript -e 'BiocManager::install()'
 
 RUN Rscript -e 'BiocManager::install("GenomicRanges")'
 
+RUN Rscript -e 'install.packages("devtools");library(devtools);install_bitbucket("eraineri/chaser")'
+
 # ./backend.py
 
 RUN apt install -y jq python3-dev python3-pip python3-gdbm parallel
