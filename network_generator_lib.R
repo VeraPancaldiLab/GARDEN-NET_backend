@@ -161,13 +161,10 @@ generate_cytoscape_json <- function(required_subnet) {
     return("{}")
   }
   # Recover vertices neighbourhood subnetwork dataframe from the graph
-  vertices_df <-
-    igraph::as_data_frame(required_subnet, what = "vertices")
-  # Remove row names
-  row.names(vertices_df) <- NULL
+  vertices_df <- as_tibble(igraph::as_data_frame(required_subnet, what = "vertices"))
   # _ in column names is not valid in Cytoscape JSON
-  colnames(vertices_df)[1] <- "id"
-  colnames(vertices_df)[5] <- "names"
+  vars <- c(id = "name", names ="gene_names")
+  vertices_df <- dplyr::rename(vertices_df, !!vars)
   # lists are not a valid supported type in Cytoscape JSON
   vertices_df$gene_list <- NULL
   # Nest all vertice rows inside data key and add the group type, both required by Cytoscape JSON
@@ -275,6 +272,8 @@ generate_features <- function(curated_PCHiC_vertex, features_file, binarization 
     features[, -1] <- ifelse(features[, -1] == 0.0, 0, 1)
   }
 
+  feature_names <- colnames(features[-1])
+
   # The features have to be compared using GenomicRanges
   features$chr <- sapply(features$fragment, function(fragment) {str_split(fragment,  "_")[[1]][1]})
   features$start <- sapply(features$fragment, function(fragment) {str_split(fragment,  "_")[[1]][2]})
@@ -296,17 +295,10 @@ generate_features <- function(curated_PCHiC_vertex, features_file, binarization 
   # With the same range identification we can do the left join
   curated_PCHiC_vertex <- left_join(PCHiC_grange_df, features_grange_df, by = c("seqnames", "start", "end"))
   # Remove useful columns only for the merging operation
-  curated_PCHiC_vertex$range <- NULL
   curated_PCHiC_vertex$chr <- curated_PCHiC_vertex$seqnames
-  curated_PCHiC_vertex$seqnames <- NULL
   curated_PCHiC_vertex$fragment <- curated_PCHiC_vertex$fragment.x
-  curated_PCHiC_vertex$fragment.x <- NULL
-  curated_PCHiC_vertex$fragment.y <- NULL
-  curated_PCHiC_vertex$width.x <- NULL
-  curated_PCHiC_vertex$strand.x <- NULL
-  curated_PCHiC_vertex$width.y <- NULL
-  curated_PCHiC_vertex$strand.y <- NULL
-  curated_PCHiC_vertex <- select(curated_PCHiC_vertex, chr, everything())
+  curated_PCHiC_vertex <- select(curated_PCHiC_vertex, -one_of(c("seqnames", "fragment.x", "fragment.y", "width.x", "width.y", "strand.x", "strand.y")))
+  curated_PCHiC_vertex <- select(curated_PCHiC_vertex, -feature_names, everything())
   curated_PCHiC_vertex <- select(curated_PCHiC_vertex, fragment, everything())
   curated_PCHiC_vertex
 }
