@@ -163,7 +163,7 @@ generate_cytoscape_json <- function(required_subnet) {
   # Recover vertices neighbourhood subnetwork dataframe from the graph
   vertices_df <- as_tibble(igraph::as_data_frame(required_subnet, what = "vertices"))
   # _ in column names is not valid in Cytoscape JSON
-  vars <- c(id = "name", names ="gene_names")
+  vars <- c(id = "name", names = "gene_names")
   vertices_df <- dplyr::rename(vertices_df, !!vars)
   # lists are not a valid supported type in Cytoscape JSON
   vertices_df$gene_list <- NULL
@@ -275,8 +275,12 @@ generate_features <- function(curated_PCHiC_vertex, features_file, binarization 
   feature_names <- colnames(features[-1])
 
   # The features have to be compared using GenomicRanges
-  features$chr <- sapply(features$fragment, function(fragment) {str_split(fragment,  "_")[[1]][1]})
-  features$start <- sapply(features$fragment, function(fragment) {str_split(fragment,  "_")[[1]][2]})
+  features$chr <- sapply(features$fragment, function(fragment) {
+    str_split(fragment, "_")[[1]][1]
+  })
+  features$start <- sapply(features$fragment, function(fragment) {
+    str_split(fragment, "_")[[1]][2]
+  })
   features$end <- features$start
   features_grange <- makeGRangesFromDataFrame(features, keep.extra.columns = T)
   PCHiC_grange <- makeGRangesFromDataFrame(curated_PCHiC_vertex, keep.extra.columns = T)
@@ -374,26 +378,28 @@ add_PCHiC_types <- function(PCHiC) {
   PCHiC
 }
 
-generate_gchas <- function (PCHiC, curated_PCHiC_vertex) {
-    chaser_PCHiC <- PCHiC[,c(1:3, 6:8)]
-    if (any(grepl("MT", chaser_PCHiC$baitChr))) {
-      chaser_PCHiC <- chaser_PCHiC[-grep("MT", chaser_PCHiC$baitChr),]
-    }
-    chaser_PCHiC$baitChr <- paste0('chr', chaser_PCHiC$baitChr)
-    chaser_PCHiC$oeChr <- paste0('chr', chaser_PCHiC$oeChr)
-    chaser_PCHiC_df <- as.data.frame(chaser_PCHiC)
-    chaser_features <- curated_PCHiC_vertex
-    chaser_features$fragment <- paste(curated_PCHiC_vertex$chr, paste(curated_PCHiC_vertex$start, curated_PCHiC_vertex$end, sep = "-"), sep =":")
-    chaser_features$fragment <- paste0("chr", chaser_features$fragment)
-    chaser_features <- select(chaser_features, c(1, 9:length(curated_PCHiC_vertex)))
-    chaser_features_df <- as.data.frame(chaser_features)
-    rownames(chaser_features_df) <- chaser_features_df[, 1]
-    chaser_features_df[, 1] <- NULL
-    chaser_net  <- chaser::chromnet_of_data_frames(chaser_PCHiC_df, chaser_features_df)
-    features <- sort(colnames(curated_PCHiC_vertex[9:length(curated_PCHiC_vertex)]))
-    chas <- sapply(features, function(feature) { round(gchas(chaser_net, feature), 2) })
+generate_gchas <- function(PCHiC, curated_PCHiC_vertex) {
+  chaser_PCHiC <- PCHiC[, c(1:3, 6:8)]
+  if (any(grepl("MT", chaser_PCHiC$baitChr))) {
+    chaser_PCHiC <- chaser_PCHiC[-grep("MT", chaser_PCHiC$baitChr), ]
+  }
+  chaser_PCHiC$baitChr <- paste0("chr", chaser_PCHiC$baitChr)
+  chaser_PCHiC$oeChr <- paste0("chr", chaser_PCHiC$oeChr)
+  chaser_PCHiC_df <- as.data.frame(chaser_PCHiC)
+  chaser_features <- curated_PCHiC_vertex
+  chaser_features$fragment <- paste(curated_PCHiC_vertex$chr, paste(curated_PCHiC_vertex$start, curated_PCHiC_vertex$end, sep = "-"), sep = ":")
+  chaser_features$fragment <- paste0("chr", chaser_features$fragment)
+  chaser_features <- select(chaser_features, c(1, 9:length(curated_PCHiC_vertex)))
+  chaser_features_df <- as.data.frame(chaser_features)
+  rownames(chaser_features_df) <- chaser_features_df[, 1]
+  chaser_features_df[, 1] <- NULL
+  chaser_net <- chaser::chromnet_of_data_frames(chaser_PCHiC_df, chaser_features_df)
+  features <- sort(colnames(curated_PCHiC_vertex[9:length(curated_PCHiC_vertex)]))
+  chas <- sapply(features, function(feature) {
+    round(gchas(chaser_net, feature), 2)
+  })
 
-    chas
+  chas
 }
 
 generate_features_metadata <- function(PCHiC) {
@@ -404,8 +410,12 @@ generate_features_metadata <- function(PCHiC) {
   curated_PCHiC_edges <- generate_edges(PCHiC)
   net_not_binarized <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
   # mean degree of nodes with one specific feature
-  mean_degree <- sapply(features, function(feature) {round(mean(degree(net)[vertex_attr(net)[[feature]] != 0], na.rm = T), 2)})
+  mean_degree <- sapply(features, function(feature) {
+    round(mean(degree(net)[vertex_attr(net)[[feature]] != 0], na.rm = T), 2)
+  })
   # abundance of each feature
-  abundance <- sapply(features, function(feature) {round(mean(vertex_attr(net_not_binarized)[[feature]], na.rm = T),2)})
+  abundance <- sapply(features, function(feature) {
+    round(mean(vertex_attr(net_not_binarized)[[feature]], na.rm = T), 2)
+  })
   list("Abundance" = abundance, "Chas" = chas, "Mean degree" = mean_degree)
 }

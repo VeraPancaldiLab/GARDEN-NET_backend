@@ -110,7 +110,7 @@ if (is.null(required_subnet)) {
         curated_PCHiC_vertex <- generate_vertex(PCHiC)
         features <- NULL
         if (!is.null(args$features)) {
-          curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex,args$features)
+          curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features)
           # Generate features
           features <- sort(colnames(curated_PCHiC_vertex[9:length(curated_PCHiC_vertex)]))
         } else {
@@ -134,9 +134,9 @@ if (is.null(required_subnet)) {
         # All network
         net_features_metadata <- generate_features_metadata(PCHiC)
         # PP network only
-        pp_net_features_metadata <- generate_features_metadata(PCHiC[PCHiC$type == "P-P",])
+        pp_net_features_metadata <- generate_features_metadata(PCHiC[PCHiC$type == "P-P", ])
         # PO network only
-        po_net_features_metadata <- generate_features_metadata(PCHiC[PCHiC$type == "P-O",])
+        po_net_features_metadata <- generate_features_metadata(PCHiC[PCHiC$type == "P-O", ])
         features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
         write(toJSON(features_metadata), file = file.path(output_folder, organism, cell_type, "features_metadata.json"))
       }
