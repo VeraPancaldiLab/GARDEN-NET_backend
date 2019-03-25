@@ -272,39 +272,7 @@ generate_features <- function(curated_PCHiC_vertex, features_file, binarization 
     features[, -1] <- ifelse(features[, -1] == 0.0, 0, 1)
   }
 
-  feature_names <- colnames(features[-1])
-
-  # The features have to be compared using GenomicRanges
-  features$chr <- sapply(features$fragment, function(fragment) {
-    str_split(fragment, "_")[[1]][1]
-  })
-  features$start <- sapply(features$fragment, function(fragment) {
-    str_split(fragment, "_")[[1]][2]
-  })
-  features$end <- features$start
-  features_grange <- makeGRangesFromDataFrame(features, keep.extra.columns = T)
-  PCHiC_grange <- makeGRangesFromDataFrame(curated_PCHiC_vertex, keep.extra.columns = T)
-
-  overlaps <- findOverlaps(features_grange, PCHiC_grange)
-
-  query_hits <- queryHits(overlaps)
-  subject_hits <- subjectHits(overlaps)
-  # Assign same range to features ranges which overlap with the fragments
-  ranges(features_grange[query_hits]) <- ranges(PCHiC_grange[subject_hits])
-  features_grange_df <- as.data.frame(features_grange)
-  features_grange_df$seqnames <- as.character(features_grange_df$seqnames)
-  PCHiC_grange_df <- as.data.frame(PCHiC_grange)
-  PCHiC_grange_df$seqnames <- as.character(PCHiC_grange_df$seqnames)
-
-  # With the same range identification we can do the left join
-  curated_PCHiC_vertex <- left_join(PCHiC_grange_df, features_grange_df, by = c("seqnames", "start", "end"))
-  # Remove useful columns only for the merging operation
-  curated_PCHiC_vertex$chr <- curated_PCHiC_vertex$seqnames
-  curated_PCHiC_vertex$fragment <- curated_PCHiC_vertex$fragment.x
-  curated_PCHiC_vertex <- select(curated_PCHiC_vertex, -one_of(c("seqnames", "fragment.x", "fragment.y", "width.x", "width.y", "strand.x", "strand.y")))
-  curated_PCHiC_vertex <- select(curated_PCHiC_vertex, -feature_names, everything())
-  curated_PCHiC_vertex <- select(curated_PCHiC_vertex, fragment, everything())
-  curated_PCHiC_vertex
+  left_join(curated_PCHiC_vertex, features, by = "fragment")
 }
 
 
