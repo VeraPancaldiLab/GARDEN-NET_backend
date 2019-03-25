@@ -373,13 +373,16 @@ generate_gchas <- function(PCHiC, curated_PCHiC_vertex) {
 generate_features_metadata <- function(PCHiC) {
   curated_PCHiC_vertex <- generate_vertex(PCHiC)
   # Always without binarization to calcule the gchas number
-  curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features, binarization = F)
-  chas <- generate_gchas(PCHiC, curated_PCHiC_vertex)
+  curated_PCHiC_vertex_not_binarized <- generate_features(curated_PCHiC_vertex, args$features, binarization = F)
+  curated_PCHiC_vertex_binarized <- generate_features(curated_PCHiC_vertex, args$features, binarization = T)
+  chas <- generate_gchas(PCHiC, curated_PCHiC_vertex_not_binarized)
   curated_PCHiC_edges <- generate_edges(PCHiC)
-  net_not_binarized <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
+  net_not_binarized <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex_not_binarized)
+  net_binarized <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex_binarized)
+  features <- sort(colnames(curated_PCHiC_vertex_binarized[9:length(curated_PCHiC_vertex_binarized)]))
   # mean degree of nodes with one specific feature
   mean_degree <- sapply(features, function(feature) {
-    round(mean(degree(net)[vertex_attr(net)[[feature]] != 0], na.rm = T), 2)
+    round(mean(degree(net_binarized)[vertex_attr(net_binarized)[[feature]] != 0], na.rm = T), 2)
   })
   # abundance of each feature
   abundance <- sapply(features, function(feature) {
