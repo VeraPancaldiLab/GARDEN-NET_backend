@@ -6,7 +6,7 @@ fi
 
 # Let globbing to be recursive
 shopt -s globstar
-for chromosome_file in "$1"**/chromosomes/chr*.json; do
+for chromosome_file in "$(realpath $1)"/**/chromosomes/chr*.json; do
   case $chromosome_file in
     *)
       x=$(jq '.nodes[0].position.x' < "$chromosome_file")
