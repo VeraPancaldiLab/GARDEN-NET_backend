@@ -50,6 +50,10 @@ parser_arguments <- function(args) {
     default = F,
     help = "Use only promoter-promoter interactions from the network"
   )
+
+  parser <- add_option(parser, "--range2ENSG_database",
+    help = "Use external alias range to ENSG database"
+  )
   return(parse_args(parser, args, convert_hyphens_to_underscores = T))
 }
 ## ------------------------------------------------------------------------
@@ -165,8 +169,6 @@ generate_cytoscape_json <- function(required_subnet) {
   # _ in column names is not valid in Cytoscape JSON
   vars <- c(id = "name", names = "gene_names")
   vertices_df <- dplyr::rename(vertices_df, !!vars)
-  # lists are not a valid supported type in Cytoscape JSON
-  vertices_df$gene_list <- NULL
   # Nest all vertice rows inside data key and add the group type, both required by Cytoscape JSON
   vertices_df <-
     apply(vertices_df, 1, function(vertice_row) {
@@ -208,8 +210,7 @@ filter_by_threshold <- function(PCHiC, threshold) {
 
 # Filter by chromosome
 filter_by_chromosome <- function(PCHiC, chromosome) {
-  PCHiC[which(PCHiC$baitChr == chromosome
-  | PCHiC$oeChr == chromosome), ]
+  PCHiC[PCHiC$baitChr == chromosome | PCHiC$oeChr == chromosome, ]
 }
 
 # Generate vertex from a PCHiC file
@@ -218,8 +219,8 @@ generate_vertex <- function(PCHiC) {
   # Join chr number with the start position
   # Also join bait and oe in the same column
   fragment <- c(
-    paste(PCHiC$baitChr, PCHiC$baitStart, sep = "_"),
-    paste(PCHiC$oeChr, PCHiC$oeStart, sep = "_")
+    paste(PCHiC$baitChr, PCHiC$baitStart, PCHiC$baitEnd, sep = "_"),
+    paste(PCHiC$oeChr, PCHiC$oeStart, PCHiC$oeEnd, sep = "_")
   )
   # Extract bait and oe names and join them to the same column
   gene_names <- c(PCHiC$baitName, PCHiC$oeName)
@@ -240,21 +241,48 @@ generate_vertex <- function(PCHiC) {
   # Uniform "." and NA name to empty strings
   gene_names <-
     ifelse(gene_names == "." | is.na(gene_names), "", gene_names)
+  gene_names <- str_replace_all(gene_names, regex(",|;"), " ")
+  # Sort gene names alphabetically to match with the alias database
+  gene_names <- sapply(gene_names, function(gene_name) {paste(sort(str_split(gene_name, " ")[[1]]), collapse = " ")})
   # Remove duplicated vertex
   curated_PCHiC_vertex <-
     distinct(tibble(fragment, gene_names, chr, start, end, type))
+
+  if (!is.null(args$range2ENSG_database)) {
+    suppressPackageStartupMessages(library(GenomicRanges))
+    alias_database  <- suppressMessages(read_tsv(file = args$range2ENSG_database))
+    alias_database$genomicRange <- GRanges(alias_database$range)
+    curated_PCHiC_vertex$range <- str_replace_all(curated_PCHiC_vertex$fragment, "_", "-")
+    curated_PCHiC_vertex$range <- str_replace(curated_PCHiC_vertex$range, "-", ":")
+    # Not support lapply/sapply
+    curated_PCHiC_vertex$genomicRange <- GRanges(curated_PCHiC_vertex$range)
+    curated_PCHiC_vertex$ensembl_id <- rep("", nrow(curated_PCHiC_vertex))
+    # sapply too slow here
+    # curated_PCHiC_vertex$ensembl_id <- sapply(GRanges(curated_PCHiC_vertex$range), function(genomicRange) {
+      # genomicRange <- GRanges(ran)
+      # overlaps <- findOverlaps(genomicRange, alias_database$genomicRange)
+      # overlaps_index <- subjectHits(overlaps)
+      # alias_database[overlaps_index, "ensembl_id"]
+      # paste(matched_ensembls$ensembl_id, collapse=" ")
+  # })
+    foreach (i=1:length(curated_PCHiC_vertex$genomicRange))%dopar%{
+      genomicRange <- curated_PCHiC_vertex$genomicRange[i]
+      overlaps <- findOverlaps(genomicRange, alias_database$genomicRange)
+      overlaps_index <- subjectHits(overlaps)
+      matched_ensembls <- alias_database[overlaps_index, "ensembl_id"]
+      curated_PCHiC_vertex$ensembl_id[i] <- paste(matched_ensembls$ensembl_id, collapse=" ")
+    }
+    curated_PCHiC_vertex$genomicRange <- NULL
+ }
   # Only use the first name
-  curated_gene_name <-
-    str_split_fixed(curated_PCHiC_vertex$gene_names, fixed(","), n = 2)[, 1]
+  # curated_gene_name <-
+    # str_split_fixed(curated_PCHiC_vertex$gene_names, fixed(","), n = 2)[, 1]
   # Remove from the last dash to the end of the name
-  curated_gene_name <- str_replace(curated_gene_name, "-[^-]+$", "")
-  curated_PCHiC_vertex <-
-    mutate(curated_PCHiC_vertex, curated_gene_name)
-  # Add gene names in array form splitted by ,
-  curated_PCHiC_vertex$gene_list <-
-    str_split(curated_PCHiC_vertex$gene_names, ",")
-  curated_PCHiC_vertex$type <-
-    ifelse(curated_PCHiC_vertex$type == "P", "bait", "oe")
+  # curated_gene_name <- str_replace(curated_gene_name, "-[^-]+$", "")
+  # curated_PCHiC_vertex <-
+    # mutate(curated_PCHiC_vertex, curated_gene_name)
+  # curated_PCHiC_vertex$type <-
+    # ifelse(curated_PCHiC_vertex$type == "P", "bait", "oe")
   curated_PCHiC_vertex
 }
 
@@ -272,46 +300,14 @@ generate_features <- function(curated_PCHiC_vertex, features_file, binarization 
     features[, -1] <- ifelse(features[, -1] == 0.0, 0, 1)
   }
 
-  feature_names <- colnames(features[-1])
-
-  # The features have to be compared using GenomicRanges
-  features$chr <- sapply(features$fragment, function(fragment) {
-    str_split(fragment, "_")[[1]][1]
-  })
-  features$start <- sapply(features$fragment, function(fragment) {
-    str_split(fragment, "_")[[1]][2]
-  })
-  features$end <- features$start
-  features_grange <- makeGRangesFromDataFrame(features, keep.extra.columns = T)
-  PCHiC_grange <- makeGRangesFromDataFrame(curated_PCHiC_vertex, keep.extra.columns = T)
-
-  overlaps <- findOverlaps(features_grange, PCHiC_grange)
-
-  query_hits <- queryHits(overlaps)
-  subject_hits <- subjectHits(overlaps)
-  # Assign same range to features ranges which overlap with the fragments
-  ranges(features_grange[query_hits]) <- ranges(PCHiC_grange[subject_hits])
-  features_grange_df <- as.data.frame(features_grange)
-  features_grange_df$seqnames <- as.character(features_grange_df$seqnames)
-  PCHiC_grange_df <- as.data.frame(PCHiC_grange)
-  PCHiC_grange_df$seqnames <- as.character(PCHiC_grange_df$seqnames)
-
-  # With the same range identification we can do the left join
-  curated_PCHiC_vertex <- left_join(PCHiC_grange_df, features_grange_df, by = c("seqnames", "start", "end"))
-  # Remove useful columns only for the merging operation
-  curated_PCHiC_vertex$chr <- curated_PCHiC_vertex$seqnames
-  curated_PCHiC_vertex$fragment <- curated_PCHiC_vertex$fragment.x
-  curated_PCHiC_vertex <- select(curated_PCHiC_vertex, -one_of(c("seqnames", "fragment.x", "fragment.y", "width.x", "width.y", "strand.x", "strand.y")))
-  curated_PCHiC_vertex <- select(curated_PCHiC_vertex, -feature_names, everything())
-  curated_PCHiC_vertex <- select(curated_PCHiC_vertex, fragment, everything())
-  curated_PCHiC_vertex
+  left_join(curated_PCHiC_vertex, features, by = "fragment")
 }
 
 
 # Generate a dataframe with the extremes of the edges
 generate_edges <- function(PCHiC) {
-  baits <- paste(PCHiC$baitChr, PCHiC$baitStart, sep = "_")
-  oes <- paste(PCHiC$oeChr, PCHiC$oeStart, sep = "_")
+  baits <- paste(PCHiC$baitChr, PCHiC$baitStart, PCHiC$baitEnd, sep = "_")
+  oes <- paste(PCHiC$oeChr, PCHiC$oeStart, PCHiC$oeEnd, sep = "_")
   curated_PCHiC_edges <- tibble(source = baits, target = oes, type = PCHiC$type)
   curated_PCHiC_edges
 }
@@ -335,8 +331,8 @@ generate_graph_metadata <- function(net) {
   largest_connected_component <- sort(components(net)$csize, decreasing = T)[1]
   nodes_in_largest_connected_component <- paste0(round(largest_connected_component / nodes * 100, 2), "%")
   network_diameter <- diameter(net)
-  promoters <- sum(V(net)$type == "bait")
-  other_ends <- sum(V(net)$type == "oe")
+  promoters <- sum(V(net)$type == "P")
+  other_ends <- sum(V(net)$type == "O")
   PP_edges <- sum(E(net)$type == "P-P")
   PO_edges <- sum(E(net)$type == "P-O")
   edge_ends <- ends(net, E(net))
