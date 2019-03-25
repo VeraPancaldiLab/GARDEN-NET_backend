@@ -27,14 +27,14 @@ PCHiC <- load_PCHiC(args$PCHiC)
 
 PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
 
-if (!is.null(args$chromosome)) {
-  PCHiC <- filter_by_chromosome(PCHiC, args$chromosome)
-}
-
 PCHiC <- add_PCHiC_types(PCHiC)
 
-if (args$only_pp_interactions) {
-  PCHiC <- PCHiC[PCHiC$type == "P-P", ]
+if (!is.null(args$chromosome)) {
+  if (args$chromosome != "PP") {
+    PCHiC <- filter_by_chromosome(PCHiC, args$chromosome)
+  } else {
+    PCHiC <- PCHiC[PCHiC$type == "P-P", ]
+  }
 }
 
 # No promoters promoters interaction network
@@ -104,9 +104,6 @@ if (is.null(required_subnet)) {
         PCHiC <- load_PCHiC(args$PCHiC)
         PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
         PCHiC <- add_PCHiC_types(PCHiC)
-        if (args$only_pp_interactions) {
-          PCHiC <- PCHiC[PCHiC$type == "P-P", ]
-        }
         curated_PCHiC_vertex <- generate_vertex(PCHiC)
         features <- NULL
         if (!is.null(args$features)) {
@@ -124,7 +121,9 @@ if (is.null(required_subnet)) {
       # Generate chromosomes
       chromosomes <- unique(curated_PCHiC_vertex$chr)
       # Remove MT mouse chromosome
-      chromosomes <- str_sort(chromosomes[-which(chromosomes == "MT")], numeric = T)
+      # Add promoter-promoter only networks
+      chromosomes <- c(chromosomes, "PP")
+      chromosomes <- str_sort(chromosomes[chromosomes != "MT"], numeric = T)
 
       # Generate suggestions
       suggestions <- generate_suggestions(net)

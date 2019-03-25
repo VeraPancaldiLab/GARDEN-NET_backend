@@ -51,7 +51,7 @@ for file in $(realpath "$input"/*); do
       mkdir -p "$output_folder/$organism/$cell_type/"{chromosomes,metadata}
       echo "${file##*/}:"
       # Generate chromosomes sequence
-      chromosomes_seq_string="$(seq --separator ' ' 1 ${chromosomes_initial_number[$organism]}) X Y"
+      chromosomes_seq_string="$(seq --separator ' ' 1 ${chromosomes_initial_number[$organism]}) X Y PP"
       # Size of the chromosomes sequence
       chromosomes_seq_size=$(wc -w <<< "$chromosomes_seq_string")
       printf "\t%s - %s\n" "$organism" "$cell_type"
