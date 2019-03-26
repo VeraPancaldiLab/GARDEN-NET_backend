@@ -77,6 +77,9 @@ search_vertex_by_name <-
       required_vertex <- V(net)[searched_vertex_index]
       required_subnet <-
         make_ego_graph(net, nodes = required_vertex)[[1]]
+
+      required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
+      required_subnet <- set_vertex_attr(required_subnet, "searched", index = V(net)[searched_vertex_index]$name, value = "true")
       return(required_subnet)
     }
   }
@@ -92,6 +95,8 @@ nearest_subnetwork <- function(required_range, net, curated_chrs_vertex_ranges) 
     # make_ego_graph always returns a list
     required_subnet <-
       make_ego_graph(net, nodes = required_vertex)[[1]]
+    required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
+    required_subnet <- set_vertex_attr(required_subnet, "searched", index = required_vertex, value = "true")
   }
   return(required_subnet)
 }
@@ -130,6 +135,8 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
     } else {
       required_subnet <-
         induced_subgraph(net, vids = required_vertex_with_neighbours)
+      required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
+      required_subnet <- set_vertex_attr(required_subnet, "searched", index = required_vertex, value = "true")
     }
   }
   return(required_subnet)
