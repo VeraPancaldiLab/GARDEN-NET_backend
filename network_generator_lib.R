@@ -66,6 +66,8 @@ search_vertex_by_name <-
       required_vertex <- V(net)[vertex]
       required_subnet <-
         make_ego_graph(net, nodes = required_vertex)[[1]]
+      required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
+      required_subnet <- set_vertex_attr(required_subnet, "searched", index = V(net)[required_vertex]$name, value = "true")
       return(required_subnet)
     } else {
       # Always search in lowercase
