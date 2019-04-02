@@ -63,7 +63,7 @@ V(net)$total_degree <- degree(net)
 
 # Search the required subnetwork
 if (!is.null(args$search)) {
-  if (str_detect(args$search, "((1?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
+  if (str_detect(args$search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
     # Only load GenomicRanges if the string searched is a range
     suppressPackageStartupMessages(library(GenomicRanges))
   }

@@ -17,7 +17,7 @@ suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(igraph))
 
-if (str_detect(args$search, "(([12]?[0-9])|([XY])):\\d+(-\\d+)?$")) {
+if (str_detect(args$search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
   # Only load GenomicRanges if the string searched is a range
   suppressPackageStartupMessages(library(GenomicRanges))
 }
