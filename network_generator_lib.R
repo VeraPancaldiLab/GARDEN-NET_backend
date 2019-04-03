@@ -355,7 +355,7 @@ add_PCHiC_types <- function(PCHiC) {
   PCHiC
 }
 
-generate_gchas <- function(PCHiC, curated_PCHiC_vertex) {
+generate_input_data_gchas <- function(PCHiC, curated_PCHiC_vertex, randomize = F) {
   chaser_PCHiC <- PCHiC[, c(1:3, 6:8)]
   if (any(grepl("MT", chaser_PCHiC$baitChr))) {
     chaser_PCHiC <- chaser_PCHiC[-grep("MT", chaser_PCHiC$baitChr), ]
@@ -370,8 +370,15 @@ generate_gchas <- function(PCHiC, curated_PCHiC_vertex) {
   chaser_features_df <- as.data.frame(chaser_features)
   rownames(chaser_features_df) <- chaser_features_df[, 1]
   chaser_features_df[, 1] <- NULL
-  chaser_net <- chaser::chromnet_of_data_frames(chaser_PCHiC_df, chaser_features_df)
-  features <- sort(colnames(curated_PCHiC_vertex[9:length(curated_PCHiC_vertex)]))
+
+  list(chaser_PCHiC = chaser_PCHiC_df, chaser_features = chaser_features_df)
+}
+
+generate_gchas <- function(chaser_net, features, randomize = F) {
+  if (randomize) {
+    chaser_net <- chaser::randomize(chaser_net)
+  }
+
   chas <- sapply(features, function(feature) {
     round(gchas(chaser_net, feature), 2)
   })
@@ -384,11 +391,31 @@ generate_features_metadata <- function(PCHiC) {
   # Always without binarization to calcule the gchas number
   curated_PCHiC_vertex_not_binarized <- generate_features(curated_PCHiC_vertex, args$features, binarization = F)
   curated_PCHiC_vertex_binarized <- generate_features(curated_PCHiC_vertex, args$features, binarization = T)
-  chas <- generate_gchas(PCHiC, curated_PCHiC_vertex_not_binarized)
+
+  gchas_input <- generate_input_data_gchas(PCHiC, curated_PCHiC_vertex_not_binarized)
+  chaser_net <- chaser::chromnet_of_data_frames(gchas_input$chaser_PCHiC, gchas_input$chaser_features)
+
+  features <- sort(colnames(curated_PCHiC_vertex_binarized[9:length(curated_PCHiC_vertex_binarized)]))
+
+  chas <- generate_gchas(chaser_net, features)
+
   curated_PCHiC_edges <- generate_edges(PCHiC)
   net_not_binarized <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex_not_binarized)
   net_binarized <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex_binarized)
-  features <- sort(colnames(curated_PCHiC_vertex_binarized[9:length(curated_PCHiC_vertex_binarized)]))
+
+  # Calculate random ChAs
+  random_chas_list <- list()
+  for (i in 1:100) {
+    random_chas_list[[i]] <- generate_gchas(chaser_net, features, randomize = T)
+  }
+
+  random_chas_means <- c()
+  for (feature in features) {
+    random_chas_feature <- sapply(1:100, function(i) {random_chas_list[[i]][feature]})
+    random_chas_means <- c(random_chas_means, mean(random_chas_feature))
+  }
+  names(random_chas_means) <- features
+
   # mean degree of nodes with one specific feature
   mean_degree <- sapply(features, function(feature) {
     round(mean(degree(net_binarized)[vertex_attr(net_binarized)[[feature]] != 0], na.rm = T), 2)
@@ -397,5 +424,5 @@ generate_features_metadata <- function(PCHiC) {
   abundance <- sapply(features, function(feature) {
     round(mean(vertex_attr(net_not_binarized)[[feature]], na.rm = T), 2)
   })
-  list("Abundance" = abundance, "Chas" = chas, "Mean degree" = mean_degree)
+  list("Abundance" = abundance, "ChAs" = chas, "Random ChAs" = random_chas_means, "Mean degree" = mean_degree)
 }

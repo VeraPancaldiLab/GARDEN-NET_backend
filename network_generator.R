@@ -98,14 +98,17 @@ if (is.null(required_subnet)) {
       write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata.json"))
     }
 
+    # Only generate metadata if there are not files
     if (!file.exists(file.path(output_folder, organism, cell_type, "search_cache.Rdata"))) {
+      features <- NULL
+      # Generate again all the network but without removing by chromosome
+      if (!is.null(args$chromosome) && args$chromosome == "1") {
+      # We need to take all the network for statistics insteand of chromosome network
       if (!is.null(args$chromosome)) {
-        # Generate again all the network but without removing by chromosome
         PCHiC <- load_PCHiC(args$PCHiC)
         PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
         PCHiC <- add_PCHiC_types(PCHiC)
         curated_PCHiC_vertex <- generate_vertex(PCHiC)
-        features <- NULL
         if (!is.null(args$features)) {
           curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features)
           # Generate features
@@ -118,6 +121,7 @@ if (is.null(required_subnet)) {
           graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
         V(net)$total_degree <- degree(net)
       }
+      # Only generate network metadata for the first chromosome because is the same for all
       # Generate chromosomes
       chromosomes <- unique(curated_PCHiC_vertex$chr)
       # Remove MT mouse chromosome
@@ -149,6 +153,7 @@ if (is.null(required_subnet)) {
       write(toJSON(features), file = file.path(output_folder, organism, cell_type, "features.json"))
       # Save search cache
       save(net, curated_PCHiC_vertex, file = file.path(output_folder, organism, cell_type, "search_cache.Rdata"), compress = F)
+      }
     }
   }
   # Convert the required subnetwork to Cytoscape Json format
