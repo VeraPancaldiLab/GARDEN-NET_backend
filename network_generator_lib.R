@@ -409,12 +409,16 @@ generate_features_metadata <- function(PCHiC) {
     random_chas_list[[i]] <- generate_gchas(chaser_net, features, randomize = T)
   }
 
-  random_chas_means <- c()
+  random_chas_min <- c()
+  random_chas_max <- c()
   for (feature in features) {
     random_chas_feature <- sapply(1:100, function(i) {random_chas_list[[i]][feature]})
-    random_chas_means <- c(random_chas_means, mean(random_chas_feature))
+    random_chas_min <- c(random_chas_min, min(random_chas_feature))
+    random_chas_max <- c(random_chas_max, max(random_chas_feature))
   }
-  names(random_chas_means) <- features
+  
+  random_chas <- paste(random_chas_min, random_chas_max, sep=",")
+  names(random_chas) <- features
 
   # mean degree of nodes with one specific feature
   mean_degree <- sapply(features, function(feature) {
@@ -424,5 +428,5 @@ generate_features_metadata <- function(PCHiC) {
   abundance <- sapply(features, function(feature) {
     round(mean(vertex_attr(net_not_binarized)[[feature]], na.rm = T), 2)
   })
-  list("Abundance" = abundance, "ChAs" = chas, "Random ChAs" = random_chas_means, "Mean degree" = mean_degree)
+  list("Abundance" = abundance, "ChAs" = chas, "Random ChAs interval" = random_chas, "Mean degree" = mean_degree)
 }
