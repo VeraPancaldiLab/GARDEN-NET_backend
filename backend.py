@@ -49,7 +49,7 @@ def main():
             cmd_list.append('--cell_type=' + cell_type)
 
         other_cmd = []
-        other_cmd.append(r"sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/'")
+        other_cmd.append(r"sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/'")
         other_cmd.append('./layout_enricher/layout_enricher')
         other_cmd.append('jq --compact-output .')
 
