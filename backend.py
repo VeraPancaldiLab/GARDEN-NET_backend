@@ -1,11 +1,21 @@
 from subprocess import check_output
-from flask import Flask, request, abort
+from flask import Flask, request, abort, jsonify, url_for
 from flask_cors import CORS
 import shelve
+from celery import Celery
+from time import sleep
 #import re
 
 app = Flask(__name__)
-CORS(app)
+# CORS(app)
+CORS(app, resources={r'/*': {"origins": '*'}})
+# Add redis broker to Flask app
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+# Initialize celery distributed task queue
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
+
 
 # SANITIZE_PATTERN = re.compile('[^-a-zA-Z0-9:]')
 
@@ -71,6 +81,63 @@ def main():
         return abort(404)
 
     return output
+
+
+@app.route("/upload_features", methods=["POST"])
+def upload_features():
+    print("upload_features")
+    print(request.files["features"])
+    features_file = request.files["features"]
+    print(features_file.filename)
+    print(features_file.read())
+    d = {"success": "features file uploaded"}
+    # CELERY task has to start here
+    return jsonify(d)
+
+@app.route('/uploading_features', methods=['POST'])
+def uploading_features():
+    print("uploading_features")
+    task = processing_features.apply_async()
+    return jsonify({}), 202, {'Location': url_for('features_task', task_id=task.id)}
+
+
+@celery.task(bind=True)
+def processing_features(self):
+    seconds = 10
+    for i in range(seconds):
+        sleep(i)
+        self.update_state(state='PROGRESS', meta={'current': i, 'total': seconds, 'status': "processing features"})
+    return {'current': seconds, 'total': seconds, 'status': 'Task completed!', 'result': 42}
+
+@app.route('/status/<task_id>')
+def features_task(task_id):
+    task = processing_features.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        # job did not start yet
+        response = {
+            'state': task.state,
+            'current': 0,
+            'total': 1,
+            'status': 'Pending...'
+        }
+    elif task.state != 'FAILURE':
+        response = {
+            'state': task.state,
+            'current': task.info.get('current', 0),
+            'total': task.info.get('total', 1),
+            'status': task.info.get('status', '')
+        }
+        if 'result' in task.info:
+            response['result'] = task.info['result']
+    else:
+        # something went wrong in the background job
+        response = {
+            'state': task.state,
+            'current': 1,
+            'total': 1,
+            'status': str(task.info),  # this is the exception raised
+        }
+    return jsonify(response)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
