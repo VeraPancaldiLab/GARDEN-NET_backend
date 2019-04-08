@@ -48,7 +48,7 @@ curated_PCHiC_vertex <- generate_vertex(PCHiC)
 # Finally add all features to their corresponding fragments
 if (!is.null(args$features)) {
   suppressPackageStartupMessages(library(GenomicRanges))
-  curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features)
+  curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features, binarization = F, log_ratio = T)
 }
 
 curated_PCHiC_edges <- generate_edges(PCHiC)

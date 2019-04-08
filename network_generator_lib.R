@@ -268,11 +268,16 @@ generate_vertex <- function(PCHiC) {
 }
 
 # Load the features
-generate_features <- function(curated_PCHiC_vertex, features_file, binarization = T) {
+generate_features <- function(curated_PCHiC_vertex, features_file, binarization = T, log_ratio = F) {
   features <-
     suppressMessages(read_tsv(file = features_file))
   # Remove chr prefix from the fragment column
   features$fragment <- str_sub(features$fragment, start = 4)
+
+  if (log_ratio) {
+        features[, -1] <- log1p(features[, -1])
+  }
+
   # Binarize all the features
   if (!args$no_features_binarization && binarization) {
     if ("V2" %in% colnames(features)) {
