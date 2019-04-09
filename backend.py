@@ -74,7 +74,6 @@ def main():
     else:
         output = shelve_cache[key]
 
-
     shelve_cache.close()
 
     if len(output) == 3:
@@ -93,13 +92,15 @@ def upload_features():
     task = processing_features.apply_async()
     return jsonify({}), 202, {'Access-Control-Expose-Headers': 'Location', 'Location': url_for('features_task', task_id=task.id)}
 
+
 @celery.task(bind=True)
 def processing_features(self):
     seconds = 10
     for i in range(seconds):
-        sleep(i)
-        self.update_state(state='PROGRESS', meta={'current': i, 'total': seconds, 'status': "processing features"})
-    return {'current': seconds, 'total': seconds, 'status': 'Task completed!', 'result': 42}
+        sleep(1)
+        self.update_state(state='PROGRESS', meta={'percentage': i * 10, 'total': 100, 'message': "Processing features..."})
+    return {'percentage': 100, 'total': 100, 'message': 'Features file processed successfully', 'result': 42}
+
 
 @app.route('/status/<task_id>')
 def features_task(task_id):
@@ -108,16 +109,16 @@ def features_task(task_id):
         # job did not start yet
         response = {
             'state': task.state,
-            'current': 0,
+            'percentage': 0,
             'total': 1,
-            'status': 'Pending...'
+            'message': 'Uploading features file...'
         }
     elif task.state != 'FAILURE':
         response = {
             'state': task.state,
-            'current': task.info.get('current', 0),
+            'percentage': task.info.get('percentage', 0),
             'total': task.info.get('total', 1),
-            'status': task.info.get('status', '')
+            'message': task.info.get('message', '')
         }
         if 'result' in task.info:
             response['result'] = task.info['result']
@@ -125,11 +126,12 @@ def features_task(task_id):
         # something went wrong in the background job
         response = {
             'state': task.state,
-            'current': 1,
+            'percentage': 1,
             'total': 1,
-            'status': str(task.info),  # this is the exception raised
+            'message': str(task.info),  # this is the exception raised
         }
     return jsonify(response)
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
