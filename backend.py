@@ -90,16 +90,8 @@ def upload_features():
     features_file = request.files["features"]
     print(features_file.filename)
     print(features_file.read())
-    d = {"success": "features file uploaded"}
-    # CELERY task has to start here
-    return jsonify(d)
-
-@app.route('/uploading_features', methods=['POST'])
-def uploading_features():
-    print("uploading_features")
     task = processing_features.apply_async()
-    return jsonify({}), 202, {'Location': url_for('features_task', task_id=task.id)}
-
+    return jsonify({}), 202, {'Access-Control-Expose-Headers': 'Location', 'Location': url_for('features_task', task_id=task.id)}
 
 @celery.task(bind=True)
 def processing_features(self):
