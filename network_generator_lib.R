@@ -54,13 +54,13 @@ parser_arguments <- function(args) {
 }
 ## ------------------------------------------------------------------------
 search_vertex_by_name <-
-  function(vertex, net, curated_chrs_vertex) {
+  function(vertex, net) {
     # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
     # Always return NULL if it doesn't exist the vertex in the graph
     if (str_detect(vertex, "^(([12]?[0-9])|([XYxy]))_\\d+$")) {
       # Always use upper case here
       vertex <- str_to_upper(vertex)
-      if (!vertex %in% curated_chrs_vertex$fragment) {
+      if (!vertex %in% V(net)$fragment) {
         return(NULL)
       }
       required_vertex <- V(net)[vertex]
@@ -72,13 +72,19 @@ search_vertex_by_name <-
     } else {
       # Always search in lowercase
       vertex <- str_to_lower(vertex)
-      if (!vertex %in% curated_chrs_vertex$curated_gene_name) {
+      if (!any(vertex %in% sapply(V(net)$gene_list, function(gene_list) { vertex %in% gene_list }))) {
         return(NULL)
       }
-      searched_vertex_index <- curated_chrs_vertex$curated_gene_name == vertex
+      searched_vertex_index <- which(sapply(V(net)$gene_list, function(gene_list) { vertex %in% gene_list }))
       required_vertex <- V(net)[searched_vertex_index]
+
+      # Multiple fragments here
       required_subnet <-
-        make_ego_graph(net, nodes = required_vertex)[[1]]
+        make_ego_graph(net, nodes = required_vertex)
+
+      required_union_subnet <- do.call(igraph::union, required_subnet)
+
+			# TODO: Merge attributes from the two graphs
 
       required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
       required_subnet <- set_vertex_attr(required_subnet, "searched", index = V(net)[searched_vertex_index]$name, value = "true")
@@ -152,7 +158,7 @@ search_subnetwork <- function(search, expand, nearest, net, curated_chrs_vertex)
         search_vertex_by_range(search, expand, nearest, net, curated_chrs_vertex)
     } else {
       required_subnet <-
-        search_vertex_by_name(search, net, curated_chrs_vertex)
+        search_vertex_by_name(search, net)
     }
     if (!is.null(required_subnet)) {
       # Always recalculate degrees for each neighborhood
@@ -252,16 +258,11 @@ generate_vertex <- function(PCHiC) {
   # Remove duplicated vertex
   curated_PCHiC_vertex <-
     distinct(tibble(fragment, gene_names, chr, start, end, type))
-  # Only use the first name
-  curated_gene_name <-
-    str_split_fixed(curated_PCHiC_vertex$gene_names, fixed(","), n = 2)[, 1]
-  # Remove from the last dash to the end of the name
-  curated_gene_name <- str_replace(curated_gene_name, "-[^-]+$", "")
-  curated_PCHiC_vertex <-
-    mutate(curated_PCHiC_vertex, curated_gene_name)
-  # Add gene names in array form splitted by ,
-  curated_PCHiC_vertex$gene_list <-
-    str_split(curated_PCHiC_vertex$gene_names, ",")
+  # Replace separators by one space
+  curated_PCHiC_vertex$gene_names <-
+    str_replace_all(curated_PCHiC_vertex$gene_names, "[,;]", " ")
+  # Add gene names in array form splitted by spaces
+  curated_PCHiC_vertex$gene_list <- str_split(curated_PCHiC_vertex$gene_names, " ")
   curated_PCHiC_vertex$type <-
     ifelse(curated_PCHiC_vertex$type == "P", "bait", "oe")
   curated_PCHiC_vertex
