@@ -72,19 +72,20 @@ search_vertex_by_name <-
     } else {
       # Always search in lowercase
       vertex <- str_to_lower(vertex)
-      if (!any(vertex %in% sapply(V(net)$gene_list, function(gene_list) { vertex %in% gene_list }))) {
+      if (!any(vertex %in% sapply(V(net)$gene_list, function(gene_list) {
+        vertex %in% gene_list
+      }))) {
         return(NULL)
       }
-      searched_vertex_index <- which(sapply(V(net)$gene_list, function(gene_list) { vertex %in% gene_list }))
+      searched_vertex_index <- which(sapply(V(net)$gene_list, function(gene_list) {
+        vertex %in% gene_list
+      }))
       required_vertex <- V(net)[searched_vertex_index]
 
       # Multiple fragments here
-      required_subnet <-
-        make_ego_graph(net, nodes = required_vertex)
+      required_subnet <- make_ego_graph(net, nodes = required_vertex)
 
-      required_union_subnet <- do.call(igraph::union, required_subnet)
-
-			# TODO: Merge attributes from the two graphs
+      required_union_subnet <- union_graphs_with_attributes(required_subnet)
 
       required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
       required_subnet <- set_vertex_attr(required_subnet, "searched", index = V(net)[searched_vertex_index]$name, value = "true")
@@ -413,12 +414,14 @@ generate_features_metadata <- function(PCHiC) {
   random_chas_min <- c()
   random_chas_max <- c()
   for (feature in features) {
-    random_chas_feature <- sapply(1:100, function(i) {random_chas_list[[i]][feature]})
+    random_chas_feature <- sapply(1:100, function(i) {
+      random_chas_list[[i]][feature]
+    })
     random_chas_min <- c(random_chas_min, min(random_chas_feature))
     random_chas_max <- c(random_chas_max, max(random_chas_feature))
   }
-  
-  random_chas <- paste(random_chas_min, random_chas_max, sep=",")
+
+  random_chas <- paste(random_chas_min, random_chas_max, sep = ",")
   names(random_chas) <- features
 
   # mean degree of nodes with one specific feature
@@ -430,4 +433,42 @@ generate_features_metadata <- function(PCHiC) {
     round(mean(vertex_attr(net_not_binarized)[[feature]], na.rm = T), 2)
   })
   list("Abundance" = abundance, "ChAs" = chas, "Random ChAs interval" = random_chas, "Mean degree" = mean_degree)
+}
+
+# Adapted from https://stackoverflow.com/a/46338136
+union_graphs_with_attributes <- function(graph_list) {
+
+  # Internal function that cleans the names of a given attribute
+  merge_attributes <- function(union_graph, component) {
+    # get component names
+    gNames <- parse(text = (paste0(component, "_attr_names(union_graph)"))) %>% eval()
+    # find names that have a "_1" or "_2" at the end
+    AttrNeedsCleaning <- grepl("(_\\d)$", gNames)
+    # remove the _x ending
+    StemName <- gsub("(_\\d)$", "", gNames)
+
+    NewnNames <- unique(StemName[AttrNeedsCleaning])
+    # replace attribute name for all attributes
+    for (i in NewnNames) {
+      attr1 <- parse(text = (paste0(component, "_attr(union_graph,'", paste0(i, "_1"), "')"))) %>% eval()
+      attr2 <- parse(text = (paste0(component, "_attr(union_graph,'", paste0(i, "_2"), "')"))) %>% eval()
+
+      union_graph <- parse(text = (paste0("set_", component, "_attr(union_graph, i, value = ifelse(is.na(attr1), attr2, attr1))"))) %>%
+        eval()
+
+      union_graph <- parse(text = (paste0("delete_", component, "_attr(union_graph,'", paste0(i, "_1"), "')"))) %>% eval()
+      union_graph <- parse(text = (paste0("delete_", component, "_attr(union_graph,'", paste0(i, "_2"), "')"))) %>% eval()
+    }
+
+    return(union_graph)
+  }
+
+
+  union_graph <- do.call(igraph::union, graph_list)
+  # loop through each attribute type in the graph and clean
+  for (component in c("graph", "edge", "vertex")) {
+    union_graph <- merge_attributes(union_graph, component)
+  }
+
+  return(union_graph)
 }
