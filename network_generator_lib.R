@@ -72,14 +72,13 @@ search_vertex_by_name <-
     } else {
       # Always search in lowercase
       vertex <- str_to_lower(vertex)
-      if (!any(vertex %in% sapply(V(net)$gene_list, function(gene_list) {
-        vertex %in% gene_list
-      }))) {
+
+      searched_vertex_index <- which(str_detect(V(net)$gene_names, fixed(vertex)))
+
+      if (length(searched_vertex_index) == 0) {
         return(NULL)
       }
-      searched_vertex_index <- which(sapply(V(net)$gene_list, function(gene_list) {
-        vertex %in% gene_list
-      }))
+
       required_vertex <- V(net)[searched_vertex_index]
 
       # Multiple fragments here
@@ -181,8 +180,6 @@ generate_cytoscape_json <- function(required_subnet) {
   # _ in column names is not valid in Cytoscape JSON
   vars <- c(id = "name", names = "gene_names")
   vertices_df <- dplyr::rename(vertices_df, !!vars)
-  # lists are not a valid supported type in Cytoscape JSON
-  vertices_df$gene_list <- NULL
   # Nest all vertice rows inside data key and add the group type, both required by Cytoscape JSON
   vertices_df <-
     apply(vertices_df, 1, function(vertice_row) {
@@ -262,8 +259,6 @@ generate_vertex <- function(PCHiC) {
   # Replace separators by one space
   curated_PCHiC_vertex$gene_names <-
     str_replace_all(curated_PCHiC_vertex$gene_names, "[,;]", " ")
-  # Add gene names in array form splitted by spaces
-  curated_PCHiC_vertex$gene_list <- str_split(curated_PCHiC_vertex$gene_names, " ")
   curated_PCHiC_vertex$type <-
     ifelse(curated_PCHiC_vertex$type == "P", "bait", "oe")
   curated_PCHiC_vertex
