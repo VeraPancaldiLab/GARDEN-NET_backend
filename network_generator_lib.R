@@ -435,29 +435,39 @@ generate_features_metadata <- function(PCHiC) {
   list("Abundance" = abundance, "ChAs" = chas, "Random ChAs interval" = random_chas, "Mean degree" = mean_degree)
 }
 
-# Adapted from https://stackoverflow.com/a/46338136
+# Adapted to N graphs from only 2, see https://stackoverflow.com/a/46338136
 union_graphs_with_attributes <- function(graph_list) {
 
-  # Internal function that cleans the names of a given attribute
+  # Internal function that cleans the names of a given attribute and merge them
   merge_attributes <- function(union_graph, component) {
     # get component names
     gNames <- parse(text = (paste0(component, "_attr_names(union_graph)"))) %>% eval()
-    # find names that have a "_1" or "_2" at the end
+    # find names that have a "_1", "_2" ... "_N" at the end
     AttrNeedsCleaning <- grepl("(_\\d)$", gNames)
-    # remove the _x ending
+    # Suffix number list to find the max to the loop counter
+    suffix_number_list <- str_extract(gNames, "\\d+$")
+    if (length(suffix_number_list) == 0) {
+      return(union_graph)
+    }
+    max_suffix_number <- max(as.numeric(suffix_number_list), na.rm = T)
+    # remove the _N ending
     StemName <- gsub("(_\\d)$", "", gNames)
 
     NewnNames <- unique(StemName[AttrNeedsCleaning])
     # replace attribute name for all attributes
     for (i in NewnNames) {
-      attr1 <- parse(text = (paste0(component, "_attr(union_graph,'", paste0(i, "_1"), "')"))) %>% eval()
-      attr2 <- parse(text = (paste0(component, "_attr(union_graph,'", paste0(i, "_2"), "')"))) %>% eval()
+      attr_list <- list()
+      # Save in a list all attribute values
+      for (j in 1:max_suffix_number) {
+        attr_list <- append(attr_list, list(parse(text = (paste0(component, "_attr(union_graph,'", paste0(i, "_", j), "')"))) %>% eval()))
+        union_graph <- parse(text = (paste0("delete_", component, "_attr(union_graph,'", paste0(i, "_", j), "')"))) %>% eval()
+      }
 
-      union_graph <- parse(text = (paste0("set_", component, "_attr(union_graph, i, value = ifelse(is.na(attr1), attr2, attr1))"))) %>%
-        eval()
+      # Collapse values replacing the NA with corresponding existing value from the different graphs
+      values <- do.call(pmin, c(attr_list, na.rm = T))
 
-      union_graph <- parse(text = (paste0("delete_", component, "_attr(union_graph,'", paste0(i, "_1"), "')"))) %>% eval()
-      union_graph <- parse(text = (paste0("delete_", component, "_attr(union_graph,'", paste0(i, "_2"), "')"))) %>% eval()
+      union_graph <- parse(text = (paste0("set_", component, "_attr(union_graph, i, value = values)"))) %>% eval()
+
     }
 
     return(union_graph)
