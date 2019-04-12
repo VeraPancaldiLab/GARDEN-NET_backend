@@ -86,7 +86,7 @@ search_vertex_by_name <-
 
       required_union_subnet <- union_graphs_with_attributes(required_subnet)
 
-      required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
+      required_subnet <- set_vertex_attr(required_union_subnet, "searched", value = "false")
       required_subnet <- set_vertex_attr(required_subnet, "searched", index = V(net)[searched_vertex_index]$name, value = "true")
       return(required_subnet)
     }
@@ -100,11 +100,13 @@ nearest_subnetwork <- function(required_range, net, curated_chrs_vertex_ranges) 
   if (is.null(required_vertex)) {
     required_subnet <- NULL
   } else {
-    # make_ego_graph always returns a list
-    required_subnet <-
-      make_ego_graph(net, nodes = required_vertex)[[1]]
-    required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
-    required_subnet <- set_vertex_attr(required_subnet, "searched", index = required_vertex, value = "true")
+      # Multiple fragments here
+      required_subnet <- make_ego_graph(net, nodes = required_vertex)
+
+      required_union_subnet <- union_graphs_with_attributes(required_subnet)
+
+      required_subnet <- set_vertex_attr(required_union_subnet, "searched", value = "false")
+      required_subnet <- set_vertex_attr(required_subnet, "searched", index = V(net)[searched_vertex_index]$name, value = "true")
   }
   return(required_subnet)
 }
