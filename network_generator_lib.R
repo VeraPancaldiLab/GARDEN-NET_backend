@@ -294,12 +294,10 @@ generate_edges <- function(PCHiC) {
 
 # Generate gene name list
 generate_suggestions <- function(net) {
-  curated_gene_name_list <- V(net)$curated_gene_name
-  curated_gene_name_list <- sort(unique(curated_gene_name_list))
-  if (curated_gene_name_list[1] == "") {
-    curated_gene_name_list <- curated_gene_name_list[-1]
+  suggestions <- sort(unique(unlist(sapply(V(net)$gene_names, function(gene_names) {str_split(gene_names, fixed(" "))}))))
+  if (suggestions[1] == "") {
+    suggestions <- suggestions[-1]
   }
-  suggestions <- sort(unique(curated_gene_name_list))
   suggestions
 }
 
