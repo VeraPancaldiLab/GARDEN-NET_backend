@@ -261,8 +261,6 @@ generate_vertex <- function(PCHiC) {
   # Replace separators by one space
   curated_PCHiC_vertex$gene_names <-
     str_replace_all(curated_PCHiC_vertex$gene_names, "[,;]", " ")
-  curated_PCHiC_vertex$type <-
-    ifelse(curated_PCHiC_vertex$type == "P", "bait", "oe")
   curated_PCHiC_vertex
 }
 
