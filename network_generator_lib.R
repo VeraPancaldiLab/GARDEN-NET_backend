@@ -60,7 +60,7 @@ search_vertex_by_name <-
     if (str_detect(vertex, "^(([12]?[0-9])|([XYxy]))_\\d+$")) {
       # Always use upper case here
       vertex <- str_to_upper(vertex)
-      if (!vertex %in% V(net)$fragment) {
+      if (!vertex %in% V(net)$name) {
         return(NULL)
       }
       required_vertex <- V(net)[vertex]
