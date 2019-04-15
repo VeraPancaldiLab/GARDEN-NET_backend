@@ -84,3 +84,7 @@ for file in $(realpath "$input"/*); do
       fi
   esac
 done
+
+# Always verify at the end all chromosomes are well generated
+echo "Verifying if all chromosomes are well generated..."
+./chromosomes_positions_checker.sh "$output_folder"
