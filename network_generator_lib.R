@@ -307,8 +307,8 @@ generate_graph_metadata <- function(net) {
   largest_connected_component <- sort(components(net)$csize, decreasing = T)[1]
   nodes_in_largest_connected_component <- paste0(round(largest_connected_component / nodes * 100, 2), "%")
   network_diameter <- diameter(net)
-  promoters <- sum(V(net)$type == "bait")
-  other_ends <- sum(V(net)$type == "oe")
+  promoters <- sum(V(net)$type == "P")
+  other_ends <- sum(V(net)$type == "O")
   PP_edges <- sum(E(net)$type == "P-P")
   PO_edges <- sum(E(net)$type == "P-O")
   edge_ends <- ends(net, E(net))
