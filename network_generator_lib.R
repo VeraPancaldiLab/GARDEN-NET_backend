@@ -390,7 +390,7 @@ generate_features_metadata <- function(PCHiC) {
   gchas_input <- generate_input_data_gchas(PCHiC, curated_PCHiC_vertex_not_binarized)
   chaser_net <- chaser::chromnet_of_data_frames(gchas_input$chaser_PCHiC, gchas_input$chaser_features)
 
-  features <- sort(colnames(curated_PCHiC_vertex_binarized[9:length(curated_PCHiC_vertex_binarized)]))
+  features <- sort(colnames(curated_PCHiC_vertex_binarized[7:length(curated_PCHiC_vertex_binarized)]))
 
   chas <- generate_gchas(chaser_net, features)
 
