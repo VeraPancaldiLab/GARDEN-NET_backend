@@ -361,7 +361,7 @@ generate_input_data_gchas <- function(PCHiC, curated_PCHiC_vertex, randomize = F
   chaser_features <- curated_PCHiC_vertex
   chaser_features$fragment <- paste(curated_PCHiC_vertex$chr, paste(curated_PCHiC_vertex$start, curated_PCHiC_vertex$end, sep = "-"), sep = ":")
   chaser_features$fragment <- paste0("chr", chaser_features$fragment)
-  chaser_features <- select(chaser_features, c(1, 9:length(curated_PCHiC_vertex)))
+  chaser_features <- select(chaser_features, c(1, 7:length(curated_PCHiC_vertex)))
   chaser_features_df <- as.data.frame(chaser_features)
   rownames(chaser_features_df) <- chaser_features_df[, 1]
   chaser_features_df[, 1] <- NULL
