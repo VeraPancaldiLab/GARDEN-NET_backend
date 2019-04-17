@@ -47,7 +47,6 @@ curated_PCHiC_vertex <- generate_vertex(PCHiC)
 
 # Finally add all features to their corresponding fragments
 if (!is.null(args$features)) {
-  suppressPackageStartupMessages(library(GenomicRanges))
   curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features)
 }
 
@@ -112,7 +111,7 @@ if (is.null(required_subnet)) {
         if (!is.null(args$features)) {
           curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features)
           # Generate features
-          features <- sort(colnames(curated_PCHiC_vertex[9:length(curated_PCHiC_vertex)]))
+          features <- sort(colnames(curated_PCHiC_vertex[7:length(curated_PCHiC_vertex)]))
         } else {
           features <- list()
         }

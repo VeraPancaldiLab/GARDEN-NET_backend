@@ -162,6 +162,9 @@ if args.format == "json":
     get_response = requests.get(
         CYTOSCAPE_BASE_URL + "/networks/" + network_id + "/views/first"
     )
+    requests.delete(
+        CYTOSCAPE_BASE_URL + "/networks/" + network_id
+    )
     print(get_response.text)
 
 # Save the network image

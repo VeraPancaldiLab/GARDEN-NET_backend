@@ -54,13 +54,13 @@ parser_arguments <- function(args) {
 }
 ## ------------------------------------------------------------------------
 search_vertex_by_name <-
-  function(vertex, net, curated_chrs_vertex) {
+  function(vertex, net) {
     # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
     # Always return NULL if it doesn't exist the vertex in the graph
     if (str_detect(vertex, "^(([12]?[0-9])|([XYxy]))_\\d+$")) {
       # Always use upper case here
       vertex <- str_to_upper(vertex)
-      if (!vertex %in% curated_chrs_vertex$fragment) {
+      if (!vertex %in% V(net)$name) {
         return(NULL)
       }
       required_vertex <- V(net)[vertex]
@@ -72,15 +72,21 @@ search_vertex_by_name <-
     } else {
       # Always search in lowercase
       vertex <- str_to_lower(vertex)
-      if (!vertex %in% curated_chrs_vertex$curated_gene_name) {
+
+      searched_vertex_index <- which(str_detect(V(net)$gene_names, fixed(vertex)))
+
+      if (length(searched_vertex_index) == 0) {
         return(NULL)
       }
-      searched_vertex_index <- curated_chrs_vertex$curated_gene_name == vertex
-      required_vertex <- V(net)[searched_vertex_index]
-      required_subnet <-
-        make_ego_graph(net, nodes = required_vertex)[[1]]
 
-      required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
+      required_vertex <- V(net)[searched_vertex_index]
+
+      # Multiple fragments here
+      required_subnet <- make_ego_graph(net, nodes = required_vertex)
+
+      required_union_subnet <- union_graphs_with_attributes(required_subnet)
+
+      required_subnet <- set_vertex_attr(required_union_subnet, "searched", value = "false")
       required_subnet <- set_vertex_attr(required_subnet, "searched", index = V(net)[searched_vertex_index]$name, value = "true")
       return(required_subnet)
     }
@@ -94,11 +100,13 @@ nearest_subnetwork <- function(required_range, net, curated_chrs_vertex_ranges) 
   if (is.null(required_vertex)) {
     required_subnet <- NULL
   } else {
-    # make_ego_graph always returns a list
-    required_subnet <-
-      make_ego_graph(net, nodes = required_vertex)[[1]]
-    required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
-    required_subnet <- set_vertex_attr(required_subnet, "searched", index = required_vertex, value = "true")
+      # Multiple fragments here
+      required_subnet <- make_ego_graph(net, nodes = required_vertex)
+
+      required_union_subnet <- union_graphs_with_attributes(required_subnet)
+
+      required_subnet <- set_vertex_attr(required_union_subnet, "searched", value = "false")
+      required_subnet <- set_vertex_attr(required_subnet, "searched", index = V(net)[searched_vertex_index]$name, value = "true")
   }
   return(required_subnet)
 }
@@ -152,7 +160,7 @@ search_subnetwork <- function(search, expand, nearest, net, curated_chrs_vertex)
         search_vertex_by_range(search, expand, nearest, net, curated_chrs_vertex)
     } else {
       required_subnet <-
-        search_vertex_by_name(search, net, curated_chrs_vertex)
+        search_vertex_by_name(search, net)
     }
     if (!is.null(required_subnet)) {
       # Always recalculate degrees for each neighborhood
@@ -174,8 +182,6 @@ generate_cytoscape_json <- function(required_subnet) {
   # _ in column names is not valid in Cytoscape JSON
   vars <- c(id = "name", names = "gene_names")
   vertices_df <- dplyr::rename(vertices_df, !!vars)
-  # lists are not a valid supported type in Cytoscape JSON
-  vertices_df$gene_list <- NULL
   # Nest all vertice rows inside data key and add the group type, both required by Cytoscape JSON
   vertices_df <-
     apply(vertices_df, 1, function(vertice_row) {
@@ -252,18 +258,9 @@ generate_vertex <- function(PCHiC) {
   # Remove duplicated vertex
   curated_PCHiC_vertex <-
     distinct(tibble(fragment, gene_names, chr, start, end, type))
-  # Only use the first name
-  curated_gene_name <-
-    str_split_fixed(curated_PCHiC_vertex$gene_names, fixed(","), n = 2)[, 1]
-  # Remove from the last dash to the end of the name
-  curated_gene_name <- str_replace(curated_gene_name, "-[^-]+$", "")
-  curated_PCHiC_vertex <-
-    mutate(curated_PCHiC_vertex, curated_gene_name)
-  # Add gene names in array form splitted by ,
-  curated_PCHiC_vertex$gene_list <-
-    str_split(curated_PCHiC_vertex$gene_names, ",")
-  curated_PCHiC_vertex$type <-
-    ifelse(curated_PCHiC_vertex$type == "P", "bait", "oe")
+  # Replace separators by one space
+  curated_PCHiC_vertex$gene_names <-
+    str_replace_all(curated_PCHiC_vertex$gene_names, "[,;]", " ")
   curated_PCHiC_vertex
 }
 
@@ -295,12 +292,10 @@ generate_edges <- function(PCHiC) {
 
 # Generate gene name list
 generate_suggestions <- function(net) {
-  curated_gene_name_list <- V(net)$curated_gene_name
-  curated_gene_name_list <- sort(unique(curated_gene_name_list))
-  if (curated_gene_name_list[1] == "") {
-    curated_gene_name_list <- curated_gene_name_list[-1]
+  suggestions <- sort(unique(unlist(sapply(V(net)$gene_names, function(gene_names) {str_split(gene_names, fixed(" "))}))))
+  if (suggestions[1] == "") {
+    suggestions <- suggestions[-1]
   }
-  suggestions <- sort(unique(curated_gene_name_list))
   suggestions
 }
 
@@ -312,8 +307,8 @@ generate_graph_metadata <- function(net) {
   largest_connected_component <- sort(components(net)$csize, decreasing = T)[1]
   nodes_in_largest_connected_component <- paste0(round(largest_connected_component / nodes * 100, 2), "%")
   network_diameter <- diameter(net)
-  promoters <- sum(V(net)$type == "bait")
-  other_ends <- sum(V(net)$type == "oe")
+  promoters <- sum(V(net)$type == "P")
+  other_ends <- sum(V(net)$type == "O")
   PP_edges <- sum(E(net)$type == "P-P")
   PO_edges <- sum(E(net)$type == "P-O")
   edge_ends <- ends(net, E(net))
@@ -366,7 +361,7 @@ generate_input_data_gchas <- function(PCHiC, curated_PCHiC_vertex, randomize = F
   chaser_features <- curated_PCHiC_vertex
   chaser_features$fragment <- paste(curated_PCHiC_vertex$chr, paste(curated_PCHiC_vertex$start, curated_PCHiC_vertex$end, sep = "-"), sep = ":")
   chaser_features$fragment <- paste0("chr", chaser_features$fragment)
-  chaser_features <- select(chaser_features, c(1, 9:length(curated_PCHiC_vertex)))
+  chaser_features <- select(chaser_features, c(1, 7:length(curated_PCHiC_vertex)))
   chaser_features_df <- as.data.frame(chaser_features)
   rownames(chaser_features_df) <- chaser_features_df[, 1]
   chaser_features_df[, 1] <- NULL
@@ -395,7 +390,7 @@ generate_features_metadata <- function(PCHiC) {
   gchas_input <- generate_input_data_gchas(PCHiC, curated_PCHiC_vertex_not_binarized)
   chaser_net <- chaser::chromnet_of_data_frames(gchas_input$chaser_PCHiC, gchas_input$chaser_features)
 
-  features <- sort(colnames(curated_PCHiC_vertex_binarized[9:length(curated_PCHiC_vertex_binarized)]))
+  features <- sort(colnames(curated_PCHiC_vertex_binarized[7:length(curated_PCHiC_vertex_binarized)]))
 
   chas <- generate_gchas(chaser_net, features)
 
@@ -412,12 +407,14 @@ generate_features_metadata <- function(PCHiC) {
   random_chas_min <- c()
   random_chas_max <- c()
   for (feature in features) {
-    random_chas_feature <- sapply(1:100, function(i) {random_chas_list[[i]][feature]})
+    random_chas_feature <- sapply(1:100, function(i) {
+      random_chas_list[[i]][feature]
+    })
     random_chas_min <- c(random_chas_min, min(random_chas_feature))
     random_chas_max <- c(random_chas_max, max(random_chas_feature))
   }
-  
-  random_chas <- paste(random_chas_min, random_chas_max, sep=",")
+
+  random_chas <- paste(random_chas_min, random_chas_max, sep = ",")
   names(random_chas) <- features
 
   # mean degree of nodes with one specific feature
@@ -429,4 +426,52 @@ generate_features_metadata <- function(PCHiC) {
     round(mean(vertex_attr(net_not_binarized)[[feature]], na.rm = T), 2)
   })
   list("Abundance" = abundance, "ChAs" = chas, "Random ChAs interval" = random_chas, "Mean degree" = mean_degree)
+}
+
+# Adapted to N graphs from only 2, see https://stackoverflow.com/a/46338136
+union_graphs_with_attributes <- function(graph_list) {
+
+  # Internal function that cleans the names of a given attribute and merge them
+  merge_attributes <- function(union_graph, component) {
+    # get component names
+    gNames <- parse(text = (paste0(component, "_attr_names(union_graph)"))) %>% eval()
+    # find names that have a "_1", "_2" ... "_N" at the end
+    AttrNeedsCleaning <- grepl("(_\\d)$", gNames)
+    # Suffix number list to find the max to the loop counter
+    suffix_number_list <- str_extract(gNames, "\\d+$")
+    if (length(suffix_number_list) == 0) {
+      return(union_graph)
+    }
+    max_suffix_number <- max(as.numeric(suffix_number_list), na.rm = T)
+    # remove the _N ending
+    StemName <- gsub("(_\\d)$", "", gNames)
+
+    NewnNames <- unique(StemName[AttrNeedsCleaning])
+    # replace attribute name for all attributes
+    for (i in NewnNames) {
+      attr_list <- list()
+      # Save in a list all attribute values
+      for (j in 1:max_suffix_number) {
+        attr_list <- append(attr_list, list(parse(text = (paste0(component, "_attr(union_graph,'", paste0(i, "_", j), "')"))) %>% eval()))
+        union_graph <- parse(text = (paste0("delete_", component, "_attr(union_graph,'", paste0(i, "_", j), "')"))) %>% eval()
+      }
+
+      # Collapse values replacing the NA with corresponding existing value from the different graphs
+      values <- do.call(pmin, c(attr_list, na.rm = T))
+
+      union_graph <- parse(text = (paste0("set_", component, "_attr(union_graph, i, value = values)"))) %>% eval()
+
+    }
+
+    return(union_graph)
+  }
+
+
+  union_graph <- do.call(igraph::union, graph_list)
+  # loop through each attribute type in the graph and clean
+  for (component in c("graph", "edge", "vertex")) {
+    union_graph <- merge_attributes(union_graph, component)
+  }
+
+  return(union_graph)
 }
