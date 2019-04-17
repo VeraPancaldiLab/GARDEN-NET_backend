@@ -1,4 +1,4 @@
-FROM r-base:3.5.2
+FROM r-base:3.5.3
 
 RUN apt update
 
@@ -16,7 +16,7 @@ RUN apt update && apt install -y yarn
 
 RUN apt install -y curl libssl-dev libxml2-dev libcurl4-openssl-dev
 
-RUN Rscript -e 'install.packages(c("tidyverse", "rjson", "igraph", "optparse"))'
+RUN Rscript -e 'install.packages(c("tibble", "stringr", "readr",  "dplyr", "rjson", "igraph", "optparse"))'
 
 RUN Rscript -e 'install.packages("BiocManager")'
 
@@ -30,4 +30,4 @@ RUN Rscript -e 'install.packages("devtools");library(devtools);install_bitbucket
 
 RUN apt install -y jq python3-dev python3-pip python3-gdbm parallel
 
-RUN pip3 install flask flask-cors gunicorn
+RUN pip3 install flask flask-cors gunicorn celery[redis]

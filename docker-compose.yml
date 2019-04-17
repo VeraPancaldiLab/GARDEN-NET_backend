@@ -10,3 +10,7 @@ services:
     working_dir: /garden-net_utils
     restart: always
     command: 'gunicorn --workers 9 --bind unix:backend.sock wsgi:app'
+  redis:
+    image: redis:alpine
+    ports:
+      - 6379:6379
