@@ -1,10 +1,11 @@
-from subprocess import check_output
+import subprocess
 from flask import Flask, request, abort, jsonify, url_for
 from flask_cors import CORS
 import shelve
 from celery import Celery
 from time import sleep
-#import re
+import tempfile
+# import re
 
 app = Flask(__name__)
 # CORS(app)
@@ -67,7 +68,7 @@ def main():
 
         print(all_cmds)
         try:
-            output = check_output(all_cmds, shell=True, encoding='UTF-8')
+            output = subprocess.check_output(all_cmds, shell=True, encoding='UTF-8')
             shelve_cache[key] = output
         except:
             return abort(404)
@@ -96,9 +97,13 @@ def upload_features():
 @celery.task(bind=True)
 def processing_features(self):
     seconds = 10
+    temp_file = tempfile.NamedTemporaryFile(mode='w+', prefix='celery-task-tmp')
+    subprocess.Popen("Rscript merge_features.R --temp_file " + temp_file.name, shell=True, encoding="UTF-8")
     for i in range(seconds):
         sleep(1)
-        self.update_state(state='PROGRESS', meta={'percentage': i * 10, 'total': 100, 'message': "Processing features..."})
+        temp_file.seek(0)
+        r_progress_info = temp_file.read()
+        self.update_state(state='PROGRESS', meta={'percentage': i * 10, 'total': 100, 'message': r_progress_info})
     return {'percentage': 100, 'total': 100, 'message': 'Features file processed successfully', 'result': 42}
 
 
