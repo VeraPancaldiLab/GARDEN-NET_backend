@@ -5,6 +5,7 @@ import shelve
 from celery import Celery
 from time import sleep
 import tempfile
+import os
 # import re
 
 app = Flask(__name__)
@@ -97,13 +98,27 @@ def upload_features():
 @celery.task(bind=True)
 def processing_features(self):
     seconds = 10
-    temp_file = tempfile.NamedTemporaryFile(mode='w+', prefix='celery-task-tmp')
-    subprocess.Popen("Rscript merge_features.R --temp_file " + temp_file.name, shell=True, encoding="UTF-8")
-    for i in range(seconds):
-        sleep(1)
-        temp_file.seek(0)
-        r_progress_info = temp_file.read()
-        self.update_state(state='PROGRESS', meta={'percentage': i * 10, 'total': 100, 'message': r_progress_info})
+
+    tmp_dir = tempfile.mkdtemp()
+    fifo_path = os.path.join(tmp_dir, 'fifo')
+    os.mkfifo(fifo_path)
+    subprocess.Popen("Rscript merge_features.R --fifo_path " + fifo_path, shell=True, encoding="UTF-8")
+
+    fifo_data = ''
+    while fifo_data != "QUIT":
+        with open(fifo_path, "r") as fifo:
+            while True:
+                fifo_data = fifo.read().strip()
+                if len(fifo_data) == 0 or fifo_data == 'QUIT':
+                    break
+                i = int(fifo_data.split(" ")[1])
+
+                r_progress_info = fifo_data
+                self.update_state(state='PROGRESS', meta={'percentage': i * 10, 'total': 100, 'message': r_progress_info + "..."})
+
+    os.remove(fifo_path)
+    os.rmdir(tmp_dir)
+
     return {'percentage': 100, 'total': 100, 'message': 'Features file processed successfully', 'result': 42}
 
 
