@@ -384,19 +384,17 @@ generate_gchas <- function(chaser_net, features, randomize = F) {
 generate_features_metadata <- function(PCHiC) {
   curated_PCHiC_vertex <- generate_vertex(PCHiC)
   # Always without binarization to calcule the gchas number
-  curated_PCHiC_vertex_not_binarized <- generate_features(curated_PCHiC_vertex, args$features, binarization = F)
-  curated_PCHiC_vertex_binarized <- generate_features(curated_PCHiC_vertex, args$features, binarization = T)
+  curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features, binarization = F)
 
-  gchas_input <- generate_input_data_gchas(PCHiC, curated_PCHiC_vertex_not_binarized)
+  gchas_input <- generate_input_data_gchas(PCHiC, curated_PCHiC_vertex)
   chaser_net <- chaser::chromnet_of_data_frames(gchas_input$chaser_PCHiC, gchas_input$chaser_features)
 
-  features <- sort(colnames(curated_PCHiC_vertex_binarized[7:length(curated_PCHiC_vertex_binarized)]))
+  features <- sort(colnames(curated_PCHiC_vertex[7:length(curated_PCHiC_vertex)]))
 
   chas <- generate_gchas(chaser_net, features)
 
   curated_PCHiC_edges <- generate_edges(PCHiC)
-  net_not_binarized <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex_not_binarized)
-  net_binarized <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex_binarized)
+  net <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
 
   # Calculate random ChAs
   random_chas_list <- list()
@@ -419,11 +417,11 @@ generate_features_metadata <- function(PCHiC) {
 
   # mean degree of nodes with one specific feature
   mean_degree <- sapply(features, function(feature) {
-    round(mean(degree(net_binarized)[vertex_attr(net_binarized)[[feature]] != 0], na.rm = T), 2)
+    round(mean(degree(net)[vertex_attr(net)[[feature]] != 0], na.rm = T), 2)
   })
   # abundance of each feature
   abundance <- sapply(features, function(feature) {
-    round(mean(vertex_attr(net_not_binarized)[[feature]], na.rm = T), 2)
+    round(mean(vertex_attr(net)[[feature]], na.rm = T), 2)
   })
   list("Abundance" = abundance, "ChAs" = chas, "Random ChAs interval" = random_chas, "Mean degree" = mean_degree)
 }
