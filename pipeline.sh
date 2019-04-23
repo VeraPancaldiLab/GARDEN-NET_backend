@@ -76,6 +76,9 @@ for file in $(realpath "$input"/*); do
         # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
         # shellcheck disable=SC2086
         parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $only_pp_interactions_parameter | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --monochrome-output --compact-output .elements > $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string
+        # Always verify at the end all chromosomes are well generated
+        echo "Verifying if all chromosomes are well generated..."
+        ./chromosomes_positions_checker.sh "$output_folder"
       else
         rmdir "$output_folder/$organism/$cell_type/chromosomes" 2> /dev/null
         # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
@@ -85,6 +88,3 @@ for file in $(realpath "$input"/*); do
   esac
 done
 
-# Always verify at the end all chromosomes are well generated
-echo "Verifying if all chromosomes are well generated..."
-./chromosomes_positions_checker.sh "$output_folder"
