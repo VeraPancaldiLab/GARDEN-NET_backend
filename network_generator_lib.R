@@ -264,21 +264,8 @@ generate_vertex <- function(PCHiC) {
   curated_PCHiC_vertex
 }
 
-# Load the features
-generate_features <- function(curated_PCHiC_vertex, features_file, binarization = T) {
-  features <-
-    suppressMessages(read_tsv(file = features_file))
-  # Remove chr prefix from the fragment column
-  features$fragment <- str_sub(features$fragment, start = 4)
-  # Binarize all the features
-  if (!args$no_features_binarization && binarization) {
-    if ("V2" %in% colnames(features)) {
-      features["V2"] <- ifelse(features["V2"] <= 0.5, 0, 1)
-    }
-    features[, -1] <- ifelse(features[, -1] == 0.0, 0, 1)
-  }
-
-  left_join(curated_PCHiC_vertex, features, by = "fragment")
+merge_features <- function(curated_PCHiC_vertex, features) {
+  curated_PCHiC_vertex <- left_join(curated_PCHiC_vertex, features, by = "fragment")
 }
 
 

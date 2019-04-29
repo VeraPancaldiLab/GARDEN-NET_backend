@@ -46,8 +46,19 @@ if (nrow(PCHiC) == 0) {
 curated_PCHiC_vertex <- generate_vertex(PCHiC)
 
 # Finally add all features to their corresponding fragments
+initial_features <- NULL
 if (!is.null(args$features)) {
-  curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features)
+  features <- suppressMessages(read_tsv(file = args$features))
+  # Remove chr prefix from the fragment column
+  features$fragment <- str_sub(features$fragment, start = 4)
+  # Binarize all the features
+  # initial_features_not_binarized <- features
+  # if ("V2" %in% colnames(features)) {
+  #   features["V2"] <- ifelse(features["V2"] <= 0.5, 0, 1)
+  # }
+  # features[, -1] <- ifelse(features[, -1] == 0.0, 0, 1)
+  initial_features <- features
+  curated_PCHiC_vertex <- merge_features(curated_PCHiC_vertex, initial_features)
 }
 
 curated_PCHiC_edges <- generate_edges(PCHiC)
