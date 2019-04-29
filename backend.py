@@ -3,10 +3,11 @@ from flask import Flask, request, abort, jsonify, url_for
 from flask_cors import CORS
 import shelve
 from celery import Celery
-from time import sleep
+import time
 import tempfile
 import os
-# import re
+import re
+import time
 
 app = Flask(__name__)
 # CORS(app)
@@ -87,37 +88,41 @@ def main():
 @app.route("/upload_features", methods=["POST"])
 def upload_features():
     print("upload_features")
+    # http://flask.pocoo.org/docs/1.0/patterns/fileuploads/
+    organism = request.args.get('organism')
+    cell_type = request.args.get('cell_type')
     print(request.files["features"])
-    features_file = request.files["features"]
-    print(features_file.filename)
-    print(features_file.read())
-    task = processing_features.apply_async()
+    features_file_object = request.files["features"]
+    features_file = os.path.abspath(features_file_object.filename)
+    print(features_file_object.read())
+    task = processing_features.apply_async(args=(organism, cell_type, features_file))
     return jsonify({}), 202, {'Access-Control-Expose-Headers': 'Location', 'Location': url_for('features_task', task_id=task.id)}
 
 
 @celery.task(bind=True)
-def processing_features(self):
-    seconds = 10
-
+def processing_features(self, organism, cell_type, features_file):
     tmp_dir = tempfile.mkdtemp()
-    fifo_path = os.path.join(tmp_dir, 'fifo')
-    os.mkfifo(fifo_path)
-    subprocess.Popen("Rscript merge_features.R --fifo_path " + fifo_path, shell=True, encoding="UTF-8")
+    fifo_file = os.path.join(tmp_dir, 'fifo')
+    os.mkfifo(fifo_file)
+    os.makedirs(os.path.join(tmp_dir, organism, cell_type, "chromosomes"), exist_ok=True)  #
+    subprocess.Popen(" ".join(["Rscript merge_features.R", "--fifo_file", fifo_file, "--organism", organism, "--cell_type", cell_type, "--features_file", features_file]), shell=True, encoding="UTF-8")
 
+    start_time = time.time()
     fifo_data = ''
     while fifo_data != "QUIT":
-        with open(fifo_path, "r") as fifo:
+        with open(fifo_file, "r") as fifo:
             while True:
                 fifo_data = fifo.read().strip()
                 if len(fifo_data) == 0 or fifo_data == 'QUIT':
                     break
-                i = int(fifo_data.split(" ")[1])
+                counter = re.search(r':\s*(\d+)', fifo_data)[1]
 
-                r_progress_info = fifo_data
-                self.update_state(state='PROGRESS', meta={'percentage': i * 10, 'total': 100, 'message': r_progress_info + "..."})
-
-    os.remove(fifo_path)
-    os.rmdir(tmp_dir)
+                r_progress_info = fifo_data.split(":")[0]
+                self.update_state(state='PROGRESS', meta={'percentage': counter, 'total': 100, 'message': r_progress_info + "..."})
+    # os.remove(fifo_file)
+    # os.rmdir(tmp_dir)
+    elapsed_time = time.time() - start_time
+    print("Elapsed time", elapsed_time)
 
     return {'percentage': 100, 'total': 100, 'message': 'Features file processed successfully', 'result': 42}
 
