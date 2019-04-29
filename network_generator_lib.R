@@ -337,7 +337,7 @@ add_PCHiC_types <- function(PCHiC) {
   PCHiC
 }
 
-generate_input_data_gchas <- function(PCHiC, curated_PCHiC_vertex, randomize = F) {
+generate_input_data_gchas <- function(PCHiC, curated_PCHiC_vertex, randomize = 0) {
   chaser_PCHiC <- PCHiC[, c(1:3, 6:8)]
   if (any(grepl("MT", chaser_PCHiC$baitChr))) {
     chaser_PCHiC <- chaser_PCHiC[-grep("MT", chaser_PCHiC$baitChr), ]
@@ -368,10 +368,7 @@ generate_gchas <- function(chaser_net, features, randomize = F) {
   chas
 }
 
-generate_features_metadata <- function(PCHiC) {
-  curated_PCHiC_vertex <- generate_vertex(PCHiC)
-  # Always without binarization to calcule the gchas number
-  curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features, binarization = F)
+generate_features_metadata <- function(PCHiC, curated_PCHiC_vertex, randomize = 0) {
 
   gchas_input <- generate_input_data_gchas(PCHiC, curated_PCHiC_vertex)
   chaser_net <- chaser::chromnet_of_data_frames(gchas_input$chaser_PCHiC, gchas_input$chaser_features)
@@ -383,16 +380,18 @@ generate_features_metadata <- function(PCHiC) {
   curated_PCHiC_edges <- generate_edges(PCHiC)
   net <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
 
+  if (randomize != 0) {
   # Calculate random ChAs
   random_chas_list <- list()
-  for (i in 1:100) {
+  random_chas <- NULL
+  for (i in 1:randomize) {
     random_chas_list[[i]] <- generate_gchas(chaser_net, features, randomize = T)
   }
 
   random_chas_min <- c()
   random_chas_max <- c()
   for (feature in features) {
-    random_chas_feature <- sapply(1:100, function(i) {
+    random_chas_feature <- sapply(1:randomize, function(i) {
       random_chas_list[[i]][feature]
     })
     random_chas_min <- c(random_chas_min, min(random_chas_feature))
@@ -401,7 +400,7 @@ generate_features_metadata <- function(PCHiC) {
 
   random_chas <- paste(random_chas_min, random_chas_max, sep = ",")
   names(random_chas) <- features
-
+  }
   # mean degree of nodes with one specific feature
   mean_degree <- sapply(features, function(feature) {
     round(mean(degree(net)[vertex_attr(net)[[feature]] != 0], na.rm = T), 2)
@@ -410,7 +409,15 @@ generate_features_metadata <- function(PCHiC) {
   abundance <- sapply(features, function(feature) {
     round(mean(vertex_attr(net)[[feature]], na.rm = T), 2)
   })
-  list("Abundance" = abundance, "ChAs" = chas, "Random ChAs interval" = random_chas, "Mean degree" = mean_degree)
+  
+  features_metadata <- list()
+  features_metadata[["Abundance"]] <-  abundance
+  features_metadata[["ChAs"]] <- chas
+  if (randomize != 0) {
+    features_metadata[["Random ChAs interval"]] <- random_chas
+  }
+  features_metadata[["Mean degree"]] <- mean_degree
+  features_metadata
 }
 
 # Adapted to N graphs from only 2, see https://stackoverflow.com/a/46338136

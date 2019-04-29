@@ -29,6 +29,8 @@ PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
 
 PCHiC <- add_PCHiC_types(PCHiC)
 
+PCHiC_ALL <- PCHiC
+
 if (!is.null(args$chromosome)) {
   if (args$chromosome != "PP") {
     PCHiC <- filter_by_chromosome(PCHiC, args$chromosome)
@@ -101,7 +103,7 @@ if (is.null(required_subnet)) {
     # Generate graph metadata
     graph_metadata <- generate_graph_metadata(net)
 
-    # Save  graph metadata
+    # Save graph metadata
     if (!is.null(args$chromosome)) {
       write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata", paste0("chr", args$chromosome, ".json")))
     } else {
@@ -115,18 +117,15 @@ if (is.null(required_subnet)) {
       if (!is.null(args$chromosome) && args$chromosome == "1") {
       # We need to take all the network for statistics insteand of chromosome network
       if (!is.null(args$chromosome)) {
-        PCHiC <- load_PCHiC(args$PCHiC)
-        PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
-        PCHiC <- add_PCHiC_types(PCHiC)
-        curated_PCHiC_vertex <- generate_vertex(PCHiC)
+        curated_PCHiC_vertex <- generate_vertex(PCHiC_ALL)
         if (!is.null(args$features)) {
-          curated_PCHiC_vertex <- generate_features(curated_PCHiC_vertex, args$features)
+          curated_PCHiC_vertex <- merge_features(curated_PCHiC_vertex, initial_features)
           # Generate features
           features <- sort(colnames(curated_PCHiC_vertex[7:length(curated_PCHiC_vertex)]))
         } else {
           features <- list()
         }
-        curated_PCHiC_edges <- generate_edges(PCHiC)
+        curated_PCHiC_edges <- generate_edges(PCHiC_ALL)
         net <-
           graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
         V(net)$total_degree <- degree(net)
@@ -145,14 +144,28 @@ if (is.null(required_subnet)) {
       # Generate gchas
       if (!is.null(args$features)) {
         # All network
-        net_features_metadata <- generate_features_metadata(PCHiC)
+        net_features_metadata <- generate_features_metadata(PCHiC_ALL, curated_PCHiC_vertex, randomize = 100)
         # PP network only
-        pp_net_features_metadata <- generate_features_metadata(PCHiC[PCHiC$type == "P-P", ])
+        PCHiC_PP <- PCHiC_ALL[PCHiC_ALL$type == "P-P",]
+        PCHiC_PP_fragment <- c(
+                               paste(PCHiC_PP$baitChr, PCHiC_PP$baitStart, sep = "_"),
+                               paste(PCHiC_PP$oeChr, PCHiC_PP$oeStart, sep = "_")
+        )
+        curated_PCHiC_vertex_PP <- curated_PCHiC_vertex[curated_PCHiC_vertex$fragment %in% PCHiC_PP_fragment,]
+        pp_net_features_metadata <- generate_features_metadata(PCHiC_PP, curated_PCHiC_vertex_PP)
         # PO network only
-        po_net_features_metadata <- generate_features_metadata(PCHiC[PCHiC$type == "P-O", ])
+        PCHiC_PO <- PCHiC_ALL[PCHiC_ALL$type == "P-O",]
+        PCHiC_PO_fragment <- c(
+                               paste(PCHiC_PO$baitChr, PCHiC_PO$baitStart, sep = "_"),
+                               paste(PCHiC_PO$oeChr, PCHiC_PO$oeStart, sep = "_")
+        )
+        curated_PCHiC_vertex_PO <- curated_PCHiC_vertex[curated_PCHiC_vertex$fragment %in% PCHiC_PO_fragment,]
+        po_net_features_metadata <- generate_features_metadata(PCHiC_PO, curated_PCHiC_vertex_PO)
         features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
         write(toJSON(features_metadata), file = file.path(output_folder, organism, cell_type, "features_metadata.json"))
       }
+
+      curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)] <- round(curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)], 2)
 
       # Save all metadata to their folders
       # Save suggestions
@@ -163,6 +176,8 @@ if (is.null(required_subnet)) {
       write(toJSON(features), file = file.path(output_folder, organism, cell_type, "features.json"))
       # Save search cache
       save(net, curated_PCHiC_vertex, file = file.path(output_folder, organism, cell_type, "search_cache.Rdata"), compress = F)
+      # Save base case metadata for merge_features.R script
+      save(PCHiC_ALL, file = file.path(output_folder, organism, cell_type, "merge_features_cache.Rdata"), compress = F)
       }
     }
   }
