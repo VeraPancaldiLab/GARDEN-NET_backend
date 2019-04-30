@@ -7,7 +7,11 @@ import time
 import tempfile
 import os
 import re
-import time
+import gzip
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = '/tmp/flask_uploads'
+ALLOWED_EXTENSIONS = set(['bed.gz'])
 
 app = Flask(__name__)
 # CORS(app)
@@ -18,6 +22,9 @@ app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
 # Initialize celery distributed task queue
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
+
+# Upload folder setting
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 # SANITIZE_PATTERN = re.compile('[^-a-zA-Z0-9:]')
@@ -93,9 +100,14 @@ def upload_features():
     cell_type = request.args.get('cell_type')
     print(request.files["features"])
     features_file_object = request.files["features"]
-    features_file = os.path.abspath(features_file_object.filename)
-    print(features_file_object.read())
-    task = processing_features.apply_async(args=(organism, cell_type, features_file))
+    features_filename = secure_filename(features_file_object.filename)
+    features_path = os.path.join(app.config['UPLOAD_FOLDER'], features_filename)
+    features_file_object.save(features_path)
+    # https://stackoverflow.com/a/28305785
+    # uncompressed = gzip.decompress(features_file_object.read())
+    headers_number = subprocess.check_output(" ".join(["zcat", features_path, "|", "head -n1", "|", "sed 's/[^\t]//g'", "|", "awk '{print length + 1}'"]), shell=True).strip()
+    print("Header: Number of columns = " + headers_number)
+    task = processing_features.apply_async(args=(organism, cell_type, features_path))
     return jsonify({}), 202, {'Access-Control-Expose-Headers': 'Location', 'Location': url_for('features_task', task_id=task.id)}
 
 
