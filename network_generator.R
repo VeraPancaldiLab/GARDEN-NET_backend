@@ -163,9 +163,8 @@ if (is.null(required_subnet)) {
         po_net_features_metadata <- generate_features_metadata(PCHiC_PO, curated_PCHiC_vertex_PO)
         features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
         write(toJSON(features_metadata), file = file.path(output_folder, organism, cell_type, "features_metadata.json"))
+        curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)] <- round(curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)], 2)
       }
-
-      curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)] <- round(curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)], 2)
 
       # Save all metadata to their folders
       # Save suggestions
