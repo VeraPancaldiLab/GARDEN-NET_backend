@@ -353,63 +353,51 @@ generate_input_data_gchas <- function(PCHiC, curated_PCHiC_vertex, randomize = 0
   rownames(chaser_features_df) <- chaser_features_df[, 1]
   chaser_features_df[, 1] <- NULL
 
-  list(chaser_PCHiC = chaser_PCHiC_df, chaser_features = chaser_features_df)
-}
-
-generate_gchas <- function(chaser_net, features, randomize = F) {
-  if (randomize) {
-    chaser_net <- chaser::randomize(chaser_net)
-  }
-
-  chas <- sapply(features, function(feature) {
-    round(gchas(chaser_net, feature), 2)
-  })
-
-  chas
+  list(PCHiC = chaser_PCHiC_df, features = chaser_features_df)
 }
 
 generate_features_metadata <- function(PCHiC, curated_PCHiC_vertex, randomize = 0) {
 
-  gchas_input <- generate_input_data_gchas(PCHiC, curated_PCHiC_vertex)
-  chaser_net <- chaser::chromnet_of_data_frames(gchas_input$chaser_PCHiC, gchas_input$chaser_features)
+  chaser_input <- generate_input_data_gchas(PCHiC, curated_PCHiC_vertex)
+
+  chaser_net <- make_chromnet(chaser_input$PCHiC)
+  chaser_net <- chaser::load_features(chaser_net, chaser_input$features, type="data.frame", missingv=0)
 
   features <- sort(colnames(curated_PCHiC_vertex[7:length(curated_PCHiC_vertex)]))
 
-  chas <- generate_gchas(chaser_net, features)
-
-  curated_PCHiC_edges <- generate_edges(PCHiC)
-  net <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
+  chas <- chas(chaser_net)
 
   if (randomize != 0) {
   # Calculate random ChAs
-  random_chas_list <- list()
-  random_chas <- NULL
-  for (i in 1:randomize) {
-    random_chas_list[[i]] <- generate_gchas(chaser_net, features, randomize = T)
-  }
+  random_chas_list <- chas(chaser_net, nrandom=randomize)
 
   random_chas_min <- c()
   random_chas_max <- c()
-  for (feature in features) {
+  for (feature_index in 1:length(features)) {
     random_chas_feature <- sapply(1:randomize, function(i) {
-      random_chas_list[[i]][feature]
+      random_chas_list[[i]][feature_index]
     })
     random_chas_min <- c(random_chas_min, min(random_chas_feature))
     random_chas_max <- c(random_chas_max, max(random_chas_feature))
   }
 
-  random_chas <- paste(random_chas_min, random_chas_max, sep = ",")
+  random_chas <- paste(round(random_chas_min, 3), round(random_chas_max, 3), sep = ",")
   names(random_chas) <- features
   }
+
   # mean degree of nodes with one specific feature
+  degree_df <- tibble(fragment=names(chaser_net$degrees), degree=chaser_net$degrees)
+  degree_df$fragment <- sapply(degree_df$fragment,function(fragment){str_replace(str_sub(str_split(fragment,"-")[[1]][1], start=4), ':', "_")})
+  curated_PCHiC_vertex_with_degrees <- left_join(curated_PCHiC_vertex, degree_df, by='fragment')
   mean_degree <- sapply(features, function(feature) {
-    round(mean(degree(net)[vertex_attr(net)[[feature]] != 0], na.rm = T), 2)
+    round(mean(curated_PCHiC_vertex_with_degrees$degree[curated_PCHiC_vertex_with_degrees[[feature]] != 0], na.rm = T), 2)
   })
+
   # abundance of each feature
   abundance <- sapply(features, function(feature) {
-    round(mean(vertex_attr(net)[[feature]], na.rm = T), 2)
+    round(mean(curated_PCHiC_vertex[[feature]], na.rm = T), 2)
   })
-  
+
   features_metadata <- list()
   features_metadata[["Abundance"]] <-  abundance
   features_metadata[["ChAs"]] <- chas
