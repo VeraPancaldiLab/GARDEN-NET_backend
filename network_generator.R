@@ -67,8 +67,9 @@ curated_PCHiC_edges <- generate_edges(PCHiC)
 
 ## ------------------------------------------------------------------------
 # Generate the network
-net <-
-  graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
+net <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
+# Remove repeated edges and self loops
+net <- simplify(net)
 
 # Add additional network metadata
 V(net)$total_degree <- degree(net)
