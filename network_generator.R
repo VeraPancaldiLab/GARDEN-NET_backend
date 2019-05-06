@@ -69,7 +69,8 @@ curated_PCHiC_edges <- generate_edges(PCHiC)
 # Generate the network
 net <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
 # Remove repeated edges and self loops
-net <- simplify(net)
+# When the repeated edges are being removing take the first type (always is c("P-P, "P-P"))
+net <- simplify(net, edge.attr.comb="first")
 
 # Add additional network metadata
 V(net)$total_degree <- degree(net)
