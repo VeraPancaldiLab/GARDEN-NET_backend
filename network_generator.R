@@ -145,24 +145,21 @@ if (is.null(required_subnet)) {
 
       # Generate gchas
       if (!is.null(args$features)) {
+
+        chaser_input_PCHiC <- generate_input_chaser_PCHiC(PCHiC_ALL)
+
+        chaser_input_features <- generate_input_chaser_features(curated_PCHiC_vertex)
+
+        chaser_net <- make_chromnet(chaser_input_PCHiC)
+
+        chaser_net <- chaser::load_features(chaser_net, chaser_input_features, type="data.frame", missingv=0)
+
         # All network
-        net_features_metadata <- generate_features_metadata(PCHiC_ALL, curated_PCHiC_vertex, randomize = 100)
+        net_features_metadata <- generate_features_metadata(chaser_net, randomize = 100)
         # PP network only
-        PCHiC_PP <- PCHiC_ALL[PCHiC_ALL$type == "P-P",]
-        PCHiC_PP_fragment <- c(
-                               paste(PCHiC_PP$baitChr, PCHiC_PP$baitStart, sep = "_"),
-                               paste(PCHiC_PP$oeChr, PCHiC_PP$oeStart, sep = "_")
-        )
-        curated_PCHiC_vertex_PP <- curated_PCHiC_vertex[curated_PCHiC_vertex$fragment %in% PCHiC_PP_fragment,]
-        pp_net_features_metadata <- generate_features_metadata(PCHiC_PP, curated_PCHiC_vertex_PP)
+        pp_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method="bb"))
         # PO network only
-        PCHiC_PO <- PCHiC_ALL[PCHiC_ALL$type == "P-O",]
-        PCHiC_PO_fragment <- c(
-                               paste(PCHiC_PO$baitChr, PCHiC_PO$baitStart, sep = "_"),
-                               paste(PCHiC_PO$oeChr, PCHiC_PO$oeStart, sep = "_")
-        )
-        curated_PCHiC_vertex_PO <- curated_PCHiC_vertex[curated_PCHiC_vertex$fragment %in% PCHiC_PO_fragment,]
-        po_net_features_metadata <- generate_features_metadata(PCHiC_PO, curated_PCHiC_vertex_PO)
+        po_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method="bo"))
         features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
         write(toJSON(features_metadata), file = file.path(output_folder, organism, cell_type, "features_metadata.json"))
         curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)] <- round(curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)], 2)
@@ -178,7 +175,7 @@ if (is.null(required_subnet)) {
       # Save search cache
       save(net, curated_PCHiC_vertex, file = file.path(output_folder, organism, cell_type, "search_cache.Rdata"), compress = F)
       # Save base case metadata for merge_features.R script
-      save(PCHiC_ALL, file = file.path(output_folder, organism, cell_type, "merge_features_cache.Rdata"), compress = F)
+      save(chaser_net, file = file.path(output_folder, organism, cell_type, "merge_features_cache.Rdata"), compress = F)
       }
     }
   }
