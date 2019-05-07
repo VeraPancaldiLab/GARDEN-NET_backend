@@ -18,6 +18,7 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--only_pp_interactions"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features"))
 
@@ -144,14 +145,12 @@ if (is.null(required_subnet)) {
       suggestions <- generate_suggestions(net)
 
       # Generate gchas
+      chaser_input_PCHiC <- generate_input_chaser_PCHiC(PCHiC_ALL)
+      chaser_net <- make_chromnet(chaser_input_PCHiC)
+
       if (!is.null(args$features)) {
 
-        chaser_input_PCHiC <- generate_input_chaser_PCHiC(PCHiC_ALL)
-
         chaser_input_features <- generate_input_chaser_features(curated_PCHiC_vertex)
-
-        chaser_net <- make_chromnet(chaser_input_PCHiC)
-
         chaser_net <- chaser::load_features(chaser_net, chaser_input_features, type="data.frame", missingv=0)
 
         # All network
@@ -174,7 +173,7 @@ if (is.null(required_subnet)) {
       write(toJSON(features), file = file.path(output_folder, organism, cell_type, "features.json"))
       # Save search cache
       save(net, curated_PCHiC_vertex, file = file.path(output_folder, organism, cell_type, "search_cache.Rdata"), compress = F)
-      # Save base case metadata for merge_features.R script
+      # Save features generation cache
       save(chaser_net, file = file.path(output_folder, organism, cell_type, "merge_features_cache.Rdata"), compress = F)
       }
     }
