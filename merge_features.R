@@ -18,6 +18,7 @@ parser <- add_option(parser, "--features_file", help = "Features file")
 args <- commandArgs(trailingOnly = TRUE)
 args <- parse_args(parser, args, convert_hyphens_to_underscores = T)
 # args <- parse_args(parser, args = c("--organism", "Mus_musculus", "--cell_type", "Embryonic_stem_cells"))
+# args <- parse_args(parser, args = c("--organism", "Homo_sapiens", "--cell_type", "Mon", "--features_file", "/tmp/ngoc/mono/S01RHSH1.ERX1305388.H3K27me3.bwa.GRCh38.broad.20160630.bed"))
 
 # Load Rdata from merge_features cache
 load(file.path("/tmp/merge_features_cache", args$organism, args$cell_type, "merge_features_cache.Rdata"))
@@ -53,29 +54,21 @@ total <- length(chromosomes) + 3
 con <- pipe(paste("echo 'Generating features metadata for all network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
 close(con)
 
-net_features_metadata <- generate_features_metadata(PCHiC_ALL, curated_PCHiC_vertex, randomize = 10)
+# TODO: select right features format file
+# chaser_net <- chaser::load_features(chaser_net, args$features_file, featname="H3K27me3", type="broad_peaks", missingv=0)
+# chaser_net <- chaser::load_features(chaser_net, args$features_file , type="data.frame", missingv=0)
+
+net_features_metadata <- generate_features_metadata(chaser_net, randomize = 10)
 # PP network only
 counter <- counter + 1
 con <- pipe(paste("echo 'Generating features metadata for PP only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
 close(con)
-PCHiC_PP <- PCHiC_ALL[PCHiC_ALL$type == "P-P",]
-  PCHiC_PP_fragment <- c(
-    paste(PCHiC_PP$baitChr, PCHiC_PP$baitStart, sep = "_"),
-    paste(PCHiC_PP$oeChr, PCHiC_PP$oeStart, sep = "_")
-)
-curated_PCHiC_vertex_PP <- curated_PCHiC_vertex[curated_PCHiC_vertex$fragment %in% PCHiC_PP_fragment,]
-pp_net_features_metadata <- generate_features_metadata(PCHiC_PP, curated_PCHiC_vertex_PP)
+pp_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method="bb"))
 # PO network only
 counter <- counter + 1
 con <- pipe(paste("echo 'Generating features metadata for PO only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
 close(con)
-PCHiC_PO <- PCHiC_ALL[PCHiC_ALL$type == "P-O",]
-  PCHiC_PO_fragment <- c(
-    paste(PCHiC_PO$baitChr, PCHiC_PO$baitStart, sep = "_"),
-    paste(PCHiC_PO$oeChr, PCHiC_PO$oeStart, sep = "_")
-)
-curated_PCHiC_vertex_PO <- curated_PCHiC_vertex[curated_PCHiC_vertex$fragment %in% PCHiC_PO_fragment,]
-po_net_features_metadata <- generate_features_metadata(PCHiC_PO, curated_PCHiC_vertex_PO)
+po_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method="bo"))
 
 features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
 write(toJSON(features_metadata), file = file.path(tmp_dir_path, args$organism, args$cell_type, "features_metadata.json"))
