@@ -1,11 +1,6 @@
 #!/usr/bin/env Rscript
 library(optparse)
-suppressPackageStartupMessages(library(stringr))
-suppressPackageStartupMessages(library(tibble))
-suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(chaser))
-suppressPackageStartupMessages(library(dplyr))
-suppressPackageStartupMessages(library(rjson))
 # suppressPackageStartupMessages(library(doParallel))
 
 source("./network_generator_lib.R")
@@ -25,17 +20,9 @@ load(file.path("/tmp/merge_features_cache", args$organism, args$cell_type, "merg
 # Load Rdata from search_query cache
 load(file.path("/tmp/merge_features_cache", args$organism, args$cell_type, "search_cache.Rdata"))
 
-tmp_dir_path <- dirname(args$fifo_file)
-
-# Calculate metadata
-## Generate chas metadata
-## Generate features metadata
-# If there are  merged features
-initial_features <- NULL
-if (ncol(curated_PCHiC_vertex) > 6) {
-  initial_features <- curated_PCHiC_vertex[, c(1, 7:length(curated_PCHiC_vertex))]
+if(!is.null(args$fifo_file)) {
+  tmp_dir_path <- dirname(args$fifo_file)
 }
-
 
 # Generate chromosomes
 chromosomes <- c("X", "Y", "PP")
@@ -51,8 +38,10 @@ counter <- 1
 total <- length(chromosomes) + 3
 
 # All network
-con <- pipe(paste("echo 'Generating features metadata for all network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
-close(con)
+if(!is.null(args$fifo_file)) {
+  con <- pipe(paste("echo 'Generating features metadata for all network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+  close(con)
+}
 
 # TODO: select right features format file
 # chaser_net <- chaser::load_features(chaser_net, args$features_file, featname="H3K27me3", type="broad_peaks", missingv=0)
@@ -61,44 +50,49 @@ close(con)
 net_features_metadata <- generate_features_metadata(chaser_net, randomize = 10)
 # PP network only
 counter <- counter + 1
-con <- pipe(paste("echo 'Generating features metadata for PP only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
-close(con)
+
+if(!is.null(args$fifo_file)) {
+  con <- pipe(paste("echo 'Generating features metadata for PP only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+  close(con)
+}
 pp_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method="bb"))
 # PO network only
 counter <- counter + 1
-con <- pipe(paste("echo 'Generating features metadata for PO only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
-close(con)
+
+if(!is.null(args$fifo_file)) {
+  con <- pipe(paste("echo 'Generating features metadata for PO only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+  close(con)
+}
 po_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method="bo"))
 
 features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
-write(toJSON(features_metadata), file = file.path(tmp_dir_path, args$organism, args$cell_type, "features_metadata.json"))
+# write(toJSON(features_metadata), file = file.path(tmp_dir_path, args$organism, args$cell_type, "features_metadata.json"))
 
 counter <- counter + 1
 # cl <- makeCluster(detectCores()-1)
 # registerDoParallel(cl)
 # foreach (chromosome=chromosomes, .packages=c("tibble", "igraph", "rjson","stringr")) %dopar% {
 for (chromosome in chromosomes) {
-  con <- pipe(paste("echo 'Processing chromosome ", chromosome, ":", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
-  close(con)
+  if(!is.null(args$fifo_file)) {
+    con <- pipe(paste("echo 'Processing chromosome ", chromosome, ":", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+    close(con)
+  }
   if (chromosome != "PP") {
-    PCHiC_chr <- filter_by_chromosome(PCHiC_ALL, chromosome)
+    chaser_net_chr <- chaser::subset_chromnet(chaser_net, chrom=paste0("chr", chromosome), interchrom=T)
   } else {
-    PCHiC_chr <- PCHiC_ALL[PCHiC_ALL$type == "P-P", ]
+    chaser_net_chr <- chaser::subset_chromnet(chaser_net, method="bb")
   }
 
-  PCHiC_chr_fragment <- c(
-    paste(PCHiC_chr$baitChr, PCHiC_chr$baitStart, sep = "_"),
-    paste(PCHiC_chr$oeChr, PCHiC_chr$oeStart, sep = "_")
-  )
-
-  curated_PCHiC_vertex_chr <- curated_PCHiC_vertex[curated_PCHiC_vertex$fragment %in% PCHiC_chr_fragment,]
-  
-  json_curated_PCHiC_vertex <- generate_curated_PCHiC_vertex_json(curated_PCHiC_vertex_chr)
-  json_curated_PCHiC_vertex <- str_replace_all(json_curated_PCHiC_vertex, fixed("\n"), "")
-  json_curated_PCHiC_vertex <- str_replace_all(json_curated_PCHiC_vertex, fixed(", "), "")
-  json_curated_PCHiC_vertex <- str_replace_all(json_curated_PCHiC_vertex, "\\{?\\s+\\}?", "")
-  write(json_curated_PCHiC_vertex, file = file.path(tmp_dir_path, args$organism, args$cell_type, "chromosomes", paste0("chr", chromosome, ".json")))
+  # TODO: generate node + features file
+  # print(chaser_net_chr$features)
+  # chaser_net_json <- generate_cytoscape_json(chaser::export(chaser_net, type="igraph"))
+  # chaser_net_json <- str_replace_all(chaser_net_json, fixed("\n"), "")
+  # chaser_net_json <- str_replace_all(chaser_net_json, fixed(", "), "")
+  # chaser_net_json <- str_replace_all(chaser_net_json, "\\{?\\s+\\}?", "")
+  # write(chaser_net_json, file = file.path(tmp_dir_path, args$organism, args$cell_type, "chromosomes", paste0("chr", chromosome, ".json")))
   counter <- counter + 1
 }
 
-pipe(paste("echo QUIT >", args$fifo_file, sep = " "), "w")
+if(!is.null(args$fifo_file)) {
+  pipe(paste("echo QUIT >", args$fifo_file, sep = " "), "w")
+}
