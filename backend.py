@@ -106,7 +106,7 @@ def upload_features():
     # https://stackoverflow.com/a/28305785
     # uncompressed = gzip.decompress(features_file_object.read())
     headers_number = subprocess.check_output(" ".join(["zcat", features_path, "|", "head -n1", "|", "sed 's/[^\t]//g'", "|", "awk '{print length + 1}'"]), shell=True).strip()
-    print("Header: Number of columns = " + headers_number)
+    print("Header: Number of columns = " + str(headers_number))
     task = processing_features.apply_async(args=(organism, cell_type, features_path))
     return jsonify({}), 202, {'Access-Control-Expose-Headers': 'Location', 'Location': url_for('features_task', task_id=task.id)}
 
