@@ -1,4 +1,4 @@
-#!/usr/bin/env RScript
+#!/usr/bin/env Rscript
 library(optparse)
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(tibble))
