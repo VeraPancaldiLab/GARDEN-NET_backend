@@ -113,11 +113,9 @@ if (is.null(required_subnet)) {
       write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata.json"))
     }
 
-    # Only generate metadata if there are not files
-    if (!file.exists(file.path(output_folder, organism, cell_type, "search_cache.Rdata"))) {
-      features <- NULL
-      # Generate again all the network but without removing by chromosome
-      if (!is.null(args$chromosome) && args$chromosome == "1") {
+    features <- NULL
+    # Generate again all the network but without removing by chromosome
+    if (!is.null(args$chromosome) && args$chromosome == "1") {
       # We need to take all the network for statistics insteand of chromosome network
       if (!is.null(args$chromosome)) {
         curated_PCHiC_vertex <- generate_vertex(PCHiC_ALL)
@@ -175,7 +173,6 @@ if (is.null(required_subnet)) {
       save(net, curated_PCHiC_vertex, file = file.path(output_folder, organism, cell_type, "search_cache.Rdata"), compress = F)
       # Save features generation cache
       save(chaser_net, file = file.path(output_folder, organism, cell_type, "merge_features_cache.Rdata"), compress = F)
-      }
     }
   }
   # Convert the required subnetwork to Cytoscape Json format
