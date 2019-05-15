@@ -9,6 +9,9 @@ parser_arguments <- function(args) {
   parser <- add_option(parser, "--features",
     help = "Separated values file of features as input file"
   )
+  parser <- add_option(parser, "--alias",
+    help = "Separated values file of alias as input file"
+  )
   parser <- add_option(parser, "--search",
     help = "Search node by name or fragment position in the graph to generate a neighborhood subgraph"
   )
@@ -477,3 +480,36 @@ generate_curated_PCHiC_vertex_json <- function(curated_PCHiC_vertex) {
   # write_lines(toJSON(JSON_df, indent = 2), 'neighboord.json')
   return(toJSON(JSON_df, indent = 2))
 }
+
+generate_alias <- function(curated_PCHiC_vertex, alias_file) {
+ alias <- read_tsv(alias_file, col_types=cols(chr=col_character()))
+ alias_grange <- makeGRangesFromDataFrame(alias, keep.extra.columns=T)
+ vertex_grange <- makeGRangesFromDataFrame(curated_PCHiC_vertex, keep.extra.columns=T)
+ merged_overlaps <- mergeByOverlaps(vertex_grange, alias_grange)
+ # concatenate fragments with multiple overlaps
+ overlaps_tibble <- tibble(range=paste(seqnames(merged_overlaps$vertex_grange), as.character(ranges(merged_overlaps$vertex_grange)), sep=":"))
+ overlaps_tibble$gene_type <- merged_overlaps$`Gene type`
+ overlaps_tibble$ensembl <- merged_overlaps$`Ensembl gene ID`
+ overlaps_tibble$name <- merged_overlaps$`Gene name`
+ overlaps_tibble$alias <- merged_overlaps$Alias
+ overlaps_tibble$hgnc <- merged_overlaps$`HGNC ID`
+ collapsed_overlaps <- overlaps_tibble %>%
+  group_by(range) %>%
+  summarise(
+     collapsed_ensembl_id=paste(ensembl, collapse=" "),
+     collapsed_name=paste(name, collapse=" "),
+     collapsed_alias=paste(alias, collapse=" "),
+     collapsed_hgnc_id=paste(hgnc, collapse=" "),
+     collapsed_gene_type=paste(gene_type, collapse=" ")
+  )
+  curated_PCHiC_vertex_ranges <- curated_PCHiC_vertex %>% mutate(range=paste(chr, paste(start, end, sep="-"), sep=":"))
+  curated_PCHiC_vertex_with_alias <- left_join(curated_PCHiC_vertex_ranges, collapsed_overlaps, by='range') %>%
+  # Be sure to remove all NA
+    mutate(alias=str_trim(str_remove_all(collapsed_alias, "\\bNA\\b"))) %>%
+    mutate(gene_names=str_trim(str_remove_all(collapsed_name, "\\bNA\\b"))) %>%
+    mutate(hgnc=str_trim(str_remove_all(collapsed_hgnc_id, "\\bNA\\b"))) %>%
+    mutate(ensembl=collapsed_ensembl_id) %>%
+    mutate(gene_type=collapsed_gene_type) %>%
+    select(-c(collapsed_name, collapsed_alias, range, collapsed_hgnc_id, collapsed_gene_type, collapsed_ensembl_id))
+}
+
