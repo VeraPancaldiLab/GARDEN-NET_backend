@@ -20,7 +20,7 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "alias_homo_database.tsv", "--intronic_regions", "intronic_regions.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "alias_mus_database.tsv"))
 
 args <- parser_arguments(args)
 
@@ -50,7 +50,13 @@ curated_PCHiC_vertex <- generate_vertex(PCHiC)
 
 if (!is.null(args$alias)) {
   suppressPackageStartupMessages(library(GenomicRanges))
-  curated_PCHiC_vertex <- generate_alias(curated_PCHiC_vertex, args$alias)
+  organism <- str_split(basename(args$PCHiC), fixed("-"))[[1]][1]
+  if (organism == "Mus_musculus") {
+    curated_PCHiC_vertex <- generate_alias_mus(curated_PCHiC_vertex, args$alias)
+  } else if (organism == "Homo_sapiens") {
+    curated_PCHiC_vertex <- generate_alias_homo(curated_PCHiC_vertex, args$alias)
+  }
+}
 
 if (!is.null(args$intronic_regions)) {
   suppressPackageStartupMessages(library(GenomicRanges))

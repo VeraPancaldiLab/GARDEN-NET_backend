@@ -484,7 +484,7 @@ generate_curated_PCHiC_vertex_json <- function(curated_PCHiC_vertex) {
   return(toJSON(JSON_df, indent = 2))
 }
 
-generate_alias <- function(curated_PCHiC_vertex, alias_file) {
+generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
  alias <- read_tsv(alias_file, col_types=cols(chr=col_character()))
  alias_grange <- makeGRangesFromDataFrame(alias, keep.extra.columns=T)
  vertex_grange <- makeGRangesFromDataFrame(curated_PCHiC_vertex, keep.extra.columns=T)
@@ -516,6 +516,42 @@ generate_alias <- function(curated_PCHiC_vertex, alias_file) {
     select(-c(collapsed_name, collapsed_alias, range, collapsed_hgnc_id, collapsed_gene_type, collapsed_ensembl_id))
 }
 
+generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
+ alias <- read_tsv(alias_file, col_types=cols(chr=col_character()))
+ alias_grange <- makeGRangesFromDataFrame(alias, keep.extra.columns=T)
+ vertex_grange <- makeGRangesFromDataFrame(curated_PCHiC_vertex, keep.extra.columns=T)
+ merged_overlaps <- mergeByOverlaps(vertex_grange, alias_grange)
+ # concatenate fragments with multiple overlaps
+ overlaps_tibble <- tibble(range=paste(seqnames(merged_overlaps$vertex_grange), as.character(ranges(merged_overlaps$vertex_grange)), sep=":"))
+  overlaps_tibble$ensembl <- merged_overlaps$`Ensembl gene ID`
+  overlaps_tibble$name <- merged_overlaps$`Gene name`
+  overlaps_tibble$gene_type <- merged_overlaps$`Gene type`
+  overlaps_tibble$mgi <- merged_overlaps$`MGI ID`
+
+collapsed_overlaps <- overlaps_tibble %>%
+  group_by(range) %>%
+  summarise(
+     collapsed_ensembl=paste(ensembl, collapse=" "),
+     collapsed_name=paste(name, collapse=" "),
+     collapsed_gene_type=paste(gene_type, collapse=" "),
+     collapsed_mgi=paste(mgi, collapse=" ")
+  )
+  curated_PCHiC_vertex_ranges <- curated_PCHiC_vertex %>%
+    mutate(range=paste(chr, paste(start, end, sep="-"), sep=":"))
+  curated_PCHiC_vertex_with_alias <- left_join(curated_PCHiC_vertex_ranges, collapsed_overlaps, by='range') %>%
+  # Be sure to remove all NA
+    mutate(gene_names=str_trim(str_remove_all(collapsed_name, "\\bNA\\b"))) %>%
+    mutate(mgi=str_trim(str_remove_all(collapsed_mgi, "\\bNA\\b"))) %>%
+    mutate(ensembl=str_trim(str_remove_all(collapsed_ensembl, "\\bNA\\b"))) %>%
+    mutate(gene_type=str_trim(str_remove_all(collapsed_gene_type, "\\bNA\\b"))) %>%
+    select(-c(collapsed_name, range, collapsed_gene_type, collapsed_ensembl, collapsed_mgi))
+    curated_PCHiC_vertex_with_alias$gene_names[is.na(curated_PCHiC_vertex_with_alias$gene_names)] <- c("")
+    curated_PCHiC_vertex_with_alias$mgi[is.na(curated_PCHiC_vertex_with_alias$mgi)] <- c("")
+    curated_PCHiC_vertex_with_alias$mgi <- str_remove_all(curated_PCHiC_vertex_with_alias$mgi, fixed("MGI:"))
+    curated_PCHiC_vertex_with_alias$ensembl[is.na(curated_PCHiC_vertex_with_alias$ensembl)] <- c("")
+    curated_PCHiC_vertex_with_alias$gene_type[is.na(curated_PCHiC_vertex_with_alias$gene_type)] <- c("")
+    curated_PCHiC_vertex_with_alias
+}
 
 generate_intronics_regions <- function(curated_PCHiC_vertex, intronic_regions_file) {
   intronic_regions <- read_tsv(intronic_regions_file, col_types=cols(chr=col_character()))
