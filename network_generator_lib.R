@@ -12,6 +12,9 @@ parser_arguments <- function(args) {
   parser <- add_option(parser, "--alias",
     help = "Separated values file of alias as input file"
   )
+  parser <- add_option(parser, "--intronic_regions",
+    help = "Separated values file of intronics as input file"
+  )
   parser <- add_option(parser, "--search",
     help = "Search node by name or fragment position in the graph to generate a neighborhood subgraph"
   )
@@ -513,3 +516,14 @@ generate_alias <- function(curated_PCHiC_vertex, alias_file) {
     select(-c(collapsed_name, collapsed_alias, range, collapsed_hgnc_id, collapsed_gene_type, collapsed_ensembl_id))
 }
 
+
+generate_intronics_regions <- function(curated_PCHiC_vertex, intronic_regions_file) {
+  intronic_regions <- read_tsv(intronic_regions_file, col_types=cols(chr=col_character()))
+  intronic_regions_grange <- makeGRangesFromDataFrame(intronic_regions)
+  vertex_grange <- makeGRangesFromDataFrame(curated_PCHiC_vertex)
+  overlaps <- findOverlaps(vertex_grange, intronic_regions_grange)
+  query_hits <- unique(queryHits(overlaps))
+  curated_PCHiC_vertex$intronic_regions <- F
+  curated_PCHiC_vertex$intronic_regions[query_hits] <- ifelse(curated_PCHiC_vertex$type[query_hits] == "O", T, F)
+  curated_PCHiC_vertex
+}

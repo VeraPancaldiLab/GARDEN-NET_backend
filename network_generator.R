@@ -18,7 +18,7 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--only_pp_interactions"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "alias_homo_database.tsv"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "alias_homo_database.tsv", "--intronic_regions", "intronic_regions.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features"))
 
@@ -51,6 +51,10 @@ curated_PCHiC_vertex <- generate_vertex(PCHiC)
 if (!is.null(args$alias)) {
   suppressPackageStartupMessages(library(GenomicRanges))
   curated_PCHiC_vertex <- generate_alias(curated_PCHiC_vertex, args$alias)
+
+if (!is.null(args$intronic_regions)) {
+  suppressPackageStartupMessages(library(GenomicRanges))
+  curated_PCHiC_vertex <- generate_intronics_regions(curated_PCHiC_vertex, args$intronic_regions)
 }
 
 # Finally add all features to their corresponding fragments
