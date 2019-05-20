@@ -20,7 +20,7 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "alias_homo_database.tsv", "--intronic_regions", "intronic_regions.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "alias_mus_database.tsv"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv"))
 
 args <- parser_arguments(args)
 
@@ -65,6 +65,7 @@ if (!is.null(args$intronic_regions)) {
 
 # Finally add all features to their corresponding fragments
 initial_features <- NULL
+initial_features_position <- NULL
 if (!is.null(args$features)) {
   features <- suppressMessages(read_tsv(file = args$features))
   # Remove chr prefix from the fragment column
@@ -77,6 +78,7 @@ if (!is.null(args$features)) {
   # features[, -1] <- ifelse(features[, -1] == 0.0, 0, 1)
   initial_features <- features
   curated_PCHiC_vertex <- merge_features(curated_PCHiC_vertex, initial_features)
+  initial_features_position <- which(colnames(curated_PCHiC_vertex) == colnames(initial_features)[2])
 }
 
 curated_PCHiC_edges <- generate_edges(PCHiC)
@@ -137,7 +139,7 @@ if (is.null(required_subnet)) {
         if (!is.null(args$features)) {
           curated_PCHiC_vertex <- merge_features(curated_PCHiC_vertex, initial_features)
           # Generate features
-          features <- sort(colnames(curated_PCHiC_vertex[7:length(curated_PCHiC_vertex)]))
+          features <- sort(colnames(curated_PCHiC_vertex[initial_features_position:length(curated_PCHiC_vertex)]))
         } else {
           features <- list()
         }
@@ -163,7 +165,7 @@ if (is.null(required_subnet)) {
 
       if (!is.null(args$features)) {
 
-        chaser_input_features <- generate_input_chaser_features(curated_PCHiC_vertex)
+        chaser_input_features <- generate_input_chaser_features(curated_PCHiC_vertex, initial_features_position)
         chaser_net <- chaser::load_features(chaser_net, chaser_input_features, type="data.frame", missingv=0)
 
         # All network
@@ -174,7 +176,7 @@ if (is.null(required_subnet)) {
         po_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method="bo"))
         features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
         write(toJSON(features_metadata), file = file.path(output_folder, organism, cell_type, "features_metadata.json"))
-        curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)] <- round(curated_PCHiC_vertex[, 7:length(curated_PCHiC_vertex)], 2)
+        curated_PCHiC_vertex[, initial_features_position:length(curated_PCHiC_vertex)] <- round(curated_PCHiC_vertex[, initial_features_position:length(curated_PCHiC_vertex)], 2)
       }
 
       # Save all metadata to their folders
