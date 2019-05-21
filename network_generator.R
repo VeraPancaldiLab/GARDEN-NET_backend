@@ -91,7 +91,7 @@ curated_PCHiC_edges <- generate_edges(PCHiC)
 net <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
 # Remove repeated edges and self loops
 # When the repeated edges are being removing take the first type (always is c("P-P, "P-P"))
-net <- simplify(net, edge.attr.comb="first")
+net <- simplify(net, edge.attr.comb = "first")
 
 # Add additional network metadata
 V(net)$total_degree <- degree(net)
@@ -183,16 +183,15 @@ if (is.null(required_subnet)) {
       chaser_net <- make_chromnet(chaser_input_PCHiC)
 
       if (!is.null(args$features)) {
-
         chaser_input_features <- generate_input_chaser_features(curated_PCHiC_vertex, initial_features_position)
-        chaser_net <- chaser::load_features(chaser_net, chaser_input_features, type="data.frame", missingv=0)
+        chaser_net <- chaser::load_features(chaser_net, chaser_input_features, type = "data.frame", missingv = 0)
 
         # All network
         net_features_metadata <- generate_features_metadata(chaser_net, randomize = 100)
         # PP network only
-        pp_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method="bb"))
+        pp_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method = "bb"))
         # PO network only
-        po_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method="bo"))
+        po_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method = "bo"))
         features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
         write(toJSON(features_metadata), file = file.path(output_folder, organism, cell_type, "features_metadata.json"))
         curated_PCHiC_vertex[, initial_features_position:length(curated_PCHiC_vertex)] <- round(curated_PCHiC_vertex[, initial_features_position:length(curated_PCHiC_vertex)], 2)
