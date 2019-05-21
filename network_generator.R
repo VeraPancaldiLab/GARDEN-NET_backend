@@ -4,6 +4,7 @@ suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(readr))
 suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(chaser))
 
