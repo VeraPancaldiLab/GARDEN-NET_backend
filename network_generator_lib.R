@@ -153,14 +153,13 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
 }
 ## Generate required subnetwork
 search_subnetwork <- function(search, expand, nearest, net, curated_chrs_vertex) {
-  if (!is.null(args$search)) {
-    if (str_detect(args$search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
+  if (!is.null(search)) {
+    if (str_detect(search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
       # We are working with a range
       required_subnet <-
         search_vertex_by_range(search, expand, nearest, net, curated_chrs_vertex)
     } else {
-      required_subnet <-
-        search_vertex_by_name(search, net)
+      required_subnet <- search_vertex_by_name(search, net)
     }
     if (!is.null(required_subnet)) {
       # Always recalculate degrees for each neighborhood
@@ -211,7 +210,7 @@ generate_cytoscape_json <- function(required_subnet) {
 # Load PCHiC
 load_PCHiC <- function(PCHiC_file) {
   suppressMessages(read_tsv(
-    file = args$PCHiC,
+    file = PCHiC_file,
     col_types = cols(baitChr = col_character(), oeChr = col_character())
   ))
 }
