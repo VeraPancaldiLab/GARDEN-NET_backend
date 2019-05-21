@@ -53,8 +53,7 @@ parser_arguments <- function(args) {
   return(parse_args(parser, args, convert_hyphens_to_underscores = T))
 }
 ## ------------------------------------------------------------------------
-search_vertex_by_name <-
-  function(vertex, net) {
+search_vertex_by_name <- function(vertex, net) {
     # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
     # Always return NULL if it doesn't exist the vertex in the graph
     if (str_detect(vertex, "^(([12]?[0-9])|([XYxy]))_\\d+$")) {
@@ -73,7 +72,7 @@ search_vertex_by_name <-
       # Always search in lowercase
       vertex <- str_to_lower(vertex)
 
-      searched_vertex_index <- which(str_detect(V(net)$gene_names, fixed(vertex)))
+      searched_vertex_index <- which(str_detect(str_to_lower(V(net)$gene_names), fixed(vertex)))
 
       if (length(searched_vertex_index) == 0) {
         return(NULL)
