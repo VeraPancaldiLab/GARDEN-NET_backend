@@ -21,6 +21,8 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "alias_homo_database.tsv", "--intronic_regions", "intronic_regions.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv", "--search", "hoxa6"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv", "--chromosome", "PP"))
 
 args <- parser_arguments(args)
 
@@ -136,6 +138,22 @@ if (is.null(required_subnet)) {
       # We need to take all the network for statistics insteand of chromosome network
       if (!is.null(args$chromosome)) {
         curated_PCHiC_vertex <- generate_vertex(PCHiC_ALL)
+
+        if (!is.null(args$alias)) {
+          suppressPackageStartupMessages(library(GenomicRanges))
+          organism <- str_split(basename(args$PCHiC), fixed("-"))[[1]][1]
+          if (organism == "Mus_musculus") {
+            curated_PCHiC_vertex <- generate_alias_mus(curated_PCHiC_vertex, args$alias)
+          } else if (organism == "Homo_sapiens") {
+            curated_PCHiC_vertex <- generate_alias_homo(curated_PCHiC_vertex, args$alias)
+          }
+        }
+
+        if (!is.null(args$intronic_regions)) {
+          suppressPackageStartupMessages(library(GenomicRanges))
+          curated_PCHiC_vertex <- generate_intronics_regions(curated_PCHiC_vertex, args$intronic_regions)
+        }
+
         if (!is.null(args$features)) {
           curated_PCHiC_vertex <- merge_features(curated_PCHiC_vertex, initial_features)
           # Generate features
