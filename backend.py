@@ -106,18 +106,29 @@ def upload_features():
     # https://stackoverflow.com/a/28305785
     # uncompressed = gzip.decompress(features_file_object.read())
     headers_number = subprocess.check_output(" ".join(["zcat", features_path, "|", "head -n1", "|", "sed 's/[^\t]//g'", "|", "awk '{print length + 1}'"]), shell=True).strip()
+
+    features_file_type = "unknown"
+    if (headers_number == 4):
+        features_file_type = "chromhmm"
+    elif (headers_number == 6):
+        features_file_type = "BED6"
+    elif (headers_number == 9):
+        features_file_type = "broad_peaks"
+    elif (headers_number == 10):
+        features_file_type = "narrow_peaks"
+
     print("Header: Number of columns = " + str(headers_number))
-    task = processing_features.apply_async(args=(organism, cell_type, features_path))
+    task = processing_features.apply_async(args=(organism, cell_type, features_path, features_file_type))
     return jsonify({}), 202, {'Access-Control-Expose-Headers': 'Location', 'Location': url_for('features_task', task_id=task.id)}
 
 
 @celery.task(bind=True)
-def processing_features(self, organism, cell_type, features_file):
+def processing_features(self, organism, cell_type, features_file, features_file_type):
     tmp_dir = tempfile.mkdtemp()
     fifo_file = os.path.join(tmp_dir, 'fifo')
     os.mkfifo(fifo_file)
     os.makedirs(os.path.join(tmp_dir, organism, cell_type, "chromosomes"), exist_ok=True)  #
-    subprocess.Popen(" ".join(["Rscript merge_features.R", "--fifo_file", fifo_file, "--organism", organism, "--cell_type", cell_type, "--features_file", features_file]), shell=True, encoding="UTF-8")
+    subprocess.Popen(" ".join(["Rscript merge_features.R", "--fifo_file", fifo_file, "--organism", organism, "--cell_type", cell_type, "--features_file", features_file, "--features_file_type", features_file_type]), shell=True, encoding="UTF-8")
 
     start_time = time.time()
     fifo_data = ''
