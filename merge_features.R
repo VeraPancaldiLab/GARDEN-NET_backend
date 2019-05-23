@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 library(optparse)
+library(stringr)
 suppressPackageStartupMessages(library(chaser))
 # suppressPackageStartupMessages(library(doParallel))
 
@@ -10,15 +11,16 @@ parser <- add_option(parser, "--fifo_file", help = "Fifo shared with celery queu
 parser <- add_option(parser, "--organism", help = "Organism")
 parser <- add_option(parser, "--cell_type", help = "Cell type")
 parser <- add_option(parser, "--features_file", help = "Features file")
+parser <- add_option(parser, "--features_file_type", help = "Features file type")
 args <- commandArgs(trailingOnly = TRUE)
 args <- parse_args(parser, args, convert_hyphens_to_underscores = T)
 # args <- parse_args(parser, args = c("--organism", "Mus_musculus", "--cell_type", "Embryonic_stem_cells"))
-# args <- parse_args(parser, args = c("--organism", "Homo_sapiens", "--cell_type", "Mon", "--features_file", "/tmp/ngoc/mono/S01RHSH1.ERX1305388.H3K27me3.bwa.GRCh38.broad.20160630.bed"))
+# args <- parse_args(parser, args = c("--organism", "Homo_sapiens", "--cell_type", "Mon", "--features_file", "/tmp/ngoc/mon/S01RHSH1.ERX1305388.H3K27me3.bwa.GRCh38.broad.20160630.bed", "--features_file_type", "broad_peaks"))
 
 # Load Rdata from merge_features cache
-load(file.path("/tmp/merge_features_cache", args$organism, args$cell_type, "merge_features_cache.Rdata"))
+load(file.path("data", args$organism, args$cell_type, "merge_features_cache.Rdata"))
 # Load Rdata from search_query cache
-load(file.path("/tmp/merge_features_cache", args$organism, args$cell_type, "search_cache.Rdata"))
+load(file.path("data", args$organism, args$cell_type, "search_cache.Rdata"))
 
 if(!is.null(args$fifo_file)) {
   tmp_dir_path <- dirname(args$fifo_file)
@@ -44,7 +46,8 @@ if(!is.null(args$fifo_file)) {
 }
 
 # TODO: select right features format file
-# chaser_net <- chaser::load_features(chaser_net, args$features_file, featname="H3K27me3", type="broad_peaks", missingv=0)
+feature_name <- str_split(basename(args$features_file), fixed('.'))[[1]][1]
+chaser_net <- chaser::load_features(chaser_net, args$features_file, featname=feature_name, type=args$features_file_type, missingv=0)
 # chaser_net <- chaser::load_features(chaser_net, args$features_file , type="data.frame", missingv=0)
 
 net_features_metadata <- generate_features_metadata(chaser_net, randomize = 10)
