@@ -45,7 +45,9 @@ if(!is.null(args$fifo_file)) {
   close(con)
 }
 
-# TODO: select right features format file
+
+# Remove old features first
+chaser_net$features <- NULL
 feature_name <- str_split(basename(args$features_file), fixed('.'))[[1]][1]
 chaser_net <- chaser::load_features(chaser_net, args$features_file, featname=feature_name, type=args$features_file_type, missingv=0)
 # chaser_net <- chaser::load_features(chaser_net, args$features_file , type="data.frame", missingv=0)
