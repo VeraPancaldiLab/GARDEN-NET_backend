@@ -105,7 +105,7 @@ def upload_features():
     features_file_object.save(features_path)
     # https://stackoverflow.com/a/28305785
     # uncompressed = gzip.decompress(features_file_object.read())
-    headers_number = subprocess.check_output(" ".join(["zcat", features_path, "|", "head -n1", "|", "sed 's/[^\t]//g'", "|", "awk '{print length + 1}'"]), shell=True).strip()
+    headers_number = int(subprocess.check_output(" ".join(["zcat", features_path, "|", "head -n1", "|", "sed 's/[^\t]//g'", "|", "awk '{print length + 1}'"]), shell=True).strip())
 
     features_file_type = "unknown"
     if (headers_number == 4):
