@@ -80,8 +80,14 @@ features$fragment <- sapply(features$fragment, function(fragment) {
 
 features <- features %>% select(fragment, everything())
 
+features_for_json <- as.list(features[feature_name])[[1]]
+# names(features_for_json) <- rep(feature_name, length(features_for_json))
+names(features_for_json) <- features$fragment
+json <- list(features_for_json)
+names(json) <- feature_name
+
 if (!is.null(args$fifo_file)) {
   pipe(paste("echo QUIT >", args$fifo_file, sep = " "), "w")
 }
 
-return(features)
+return(toJSON(json))
