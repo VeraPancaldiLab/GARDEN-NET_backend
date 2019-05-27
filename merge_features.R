@@ -87,6 +87,7 @@ json <- list(features_for_json)
 names(json) <- feature_name
 
 write(toJSON(json), file.path(tmp_dir_path, "features.json"))
+write(toJSON(features_metadata), file.path(tmp_dir_path, "features_metadata.json"))
 
 if (!is.null(args$fifo_file)) {
   pipe(paste("echo QUIT >", args$fifo_file, sep = " "), "w")
