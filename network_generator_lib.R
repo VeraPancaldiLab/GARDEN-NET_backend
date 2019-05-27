@@ -455,33 +455,6 @@ union_graphs_with_attributes <- function(graph_list) {
   return(union_graph)
 }
 
-generate_curated_PCHiC_vertex_json <- function(curated_PCHiC_vertex) {
-  if (is.null(curated_PCHiC_vertex)) {
-    return("{}")
-  }
-  # _ in column names is not valid in Cytoscape JSON
-  vertices_df <- dplyr::rename(curated_PCHiC_vertex, names = "gene_names")
-  # Nest all vertice rows inside data key and add the group type, both required by Cytoscape JSON
-  vertices_df <-
-    apply(vertices_df, 1, function(vertice_row) {
-      list(data = vertice_row, group = "nodes")
-    })
-  # Rename edge extremes with the Cytoscape JSON squema
-  edges_df <- tibble(source = paste(PCHiC_chr$baitChr, PCHiC_chr$baitStart, sep = "_"), target = paste(PCHiC_chr$oeChr, PCHiC_chr$oeStart, sep = "_"))
-  # Add id to the edges
-  edges_df$id <- paste(edges_df$source, edges_df$target, sep = "~")
-  # Nest all edge rows inside data key and add the group type, both required by Cytoscape JSON
-  edges_df <-
-    apply(edges_df, 1, function(edge_row) {
-      list(data = edge_row, group = "edges")
-    })
-  # Join vertices and edges inside the same dataframe
-  JSON_df <- c(vertices_df, edges_df)
-  # Write JSON dataframe to a file
-  # write_lines(toJSON(JSON_df, indent = 2), 'neighboord.json')
-  return(toJSON(JSON_df, indent = 2))
-}
-
 generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
   alias <- read_tsv(alias_file, col_types = cols(chr = col_character()))
   # First overlap others ends and annotate them
