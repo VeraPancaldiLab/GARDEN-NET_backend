@@ -3,9 +3,10 @@ from flask import Flask, request, abort, jsonify, url_for
 from flask_cors import CORS
 import shelve
 from celery import Celery
-import time
+
 import tempfile
 import os
+import shutil
 import re
 import gzip
 from werkzeug.utils import secure_filename
@@ -14,7 +15,6 @@ UPLOAD_FOLDER = "/tmp/flask_uploads"
 ALLOWED_EXTENSIONS = set(["bed.gz"])
 
 app = Flask(__name__)
-# CORS(app)
 CORS(app, resources={r"/*": {"origins": "*"}})
 # Add redis broker to Flask app
 app.config["CELERY_BROKER_URL"] = "redis://localhost:6379/0"
@@ -104,7 +104,8 @@ def upload_features():
     print(request.files["features"])
     features_file_object = request.files["features"]
     features_filename = secure_filename(features_file_object.filename)
-    features_path = os.path.join(app.config["UPLOAD_FOLDER"], features_filename)
+    tmp_dir = tempfile.mkdtemp()
+    features_path = os.path.join(tmp_dir, features_filename)
     features_file_object.save(features_path)
     # https://stackoverflow.com/a/28305785
     # uncompressed = gzip.decompress(features_file_object.read())
@@ -136,9 +137,9 @@ def upload_features():
     elif headers_number == 10:
         features_file_type = "narrow_peaks"
 
-    print("Header: Number of columns = " + str(headers_number))
+    # print("Header: Number of columns = " + str(headers_number))
     task = processing_features.apply_async(
-        args=(organism, cell_type, features_path, features_file_type)
+        args=(tmp_dir, organism, cell_type, features_path, features_file_type)
     )
     return (
         jsonify({}),
@@ -151,14 +152,13 @@ def upload_features():
 
 
 @celery.task(bind=True)
-def processing_features(self, organism, cell_type, features_file, features_file_type):
-    tmp_dir = tempfile.mkdtemp()
+def processing_features(
+    self, tmp_dir, organism, cell_type, features_file, features_file_type
+):
     fifo_file = os.path.join(tmp_dir, "fifo")
     os.mkfifo(fifo_file)
-    os.makedirs(
-        os.path.join(tmp_dir, organism, cell_type, "chromosomes"), exist_ok=True
-    )  #
-    subprocess.check_output(
+
+    subprocess.Popen(
         " ".join(
             [
                 "Rscript merge_features.R",
@@ -178,13 +178,12 @@ def processing_features(self, organism, cell_type, features_file, features_file_
         encoding="UTF-8",
     )
 
-    start_time = time.time()
     fifo_data = ""
     while fifo_data != "QUIT":
         with open(fifo_file, "r") as fifo:
             while True:
                 fifo_data = fifo.read().strip()
-                if len(fifo_data) == 0 or fifo_data == "QUIT":
+                if not fifo_data or fifo_data == "QUIT":
                     break
                 counter = re.search(r":\s*(\d+)", fifo_data)[1]
 
@@ -197,16 +196,19 @@ def processing_features(self, organism, cell_type, features_file, features_file_
                         "message": r_progress_info + "...",
                     },
                 )
-    # os.remove(fifo_file)
-    # os.rmdir(tmp_dir)
-    elapsed_time = time.time() - start_time
-    print("Elapsed time", elapsed_time)
+
+    features = None
+    with open(os.path.join(tmp_dir, "features.json"), "r") as f:
+        features = f.read()
+
+    os.remove(fifo_file)
+    shutil.rmtree(tmp_dir)
 
     return {
         "percentage": 100,
         "total": 100,
         "message": "Features file processed successfully",
-        "result": 42,
+        "result": features,
     }
 
 
