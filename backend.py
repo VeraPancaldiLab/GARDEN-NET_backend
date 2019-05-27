@@ -10,34 +10,35 @@ import re
 import gzip
 from werkzeug.utils import secure_filename
 
-UPLOAD_FOLDER = '/tmp/flask_uploads'
-ALLOWED_EXTENSIONS = set(['bed.gz'])
+UPLOAD_FOLDER = "/tmp/flask_uploads"
+ALLOWED_EXTENSIONS = set(["bed.gz"])
 
 app = Flask(__name__)
 # CORS(app)
-CORS(app, resources={r'/*': {"origins": '*'}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 # Add redis broker to Flask app
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+app.config["CELERY_BROKER_URL"] = "redis://localhost:6379/0"
+app.config["CELERY_RESULT_BACKEND"] = "redis://localhost:6379/0"
 # Initialize celery distributed task queue
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery = Celery(app.name, broker=app.config["CELERY_BROKER_URL"])
 celery.conf.update(app.config)
 
 # Upload folder setting
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
 # SANITIZE_PATTERN = re.compile('[^-a-zA-Z0-9:]')
 
-@app.route("/", defaults={'search': ''})
+
+@app.route("/", defaults={"search": ""})
 @app.route("/")
 def main():
-    search   = request.args.get('search')
-    organism = request.args.get('organism')
-    cell_type = request.args.get('cell_type')
+    search = request.args.get("search")
+    organism = request.args.get("organism")
+    cell_type = request.args.get("cell_type")
 
     # Open or create a simple cache
-    shelve_cache = shelve.open('.shelve_cache')
+    shelve_cache = shelve.open(".shelve_cache")
 
     # Valid URLs:
     #   '127.0.0.1:5000/'
@@ -52,32 +53,34 @@ def main():
 
     # Generate the keys for the cache
 
-    key = '|'.join([search, organism, cell_type])
+    key = "|".join([search, organism, cell_type])
 
-    if  key not in shelve_cache:
+    if key not in shelve_cache:
         cmd_list = ["./search_query.R"]
 
         if search:
-            #sanitized_search = SANITIZE_PATTERN.sub('', search.split()[0])
+            # sanitized_search = SANITIZE_PATTERN.sub('', search.split()[0])
             sanitized_search = search.split()[0]
-            cmd_list.append('--search=' + "'" + sanitized_search + "'")
+            cmd_list.append("--search=" + "'" + sanitized_search + "'")
 
         if organism:
-            cmd_list.append('--organism=' + organism)
+            cmd_list.append("--organism=" + organism)
 
         if cell_type:
-            cmd_list.append('--cell_type=' + cell_type)
+            cmd_list.append("--cell_type=" + cell_type)
 
         other_cmd = []
-        other_cmd.append(r"sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/'")
-        other_cmd.append('./layout_enricher/layout_enricher')
-        other_cmd.append('jq --compact-output .')
+        other_cmd.append(
+            r"sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/'"
+        )
+        other_cmd.append("./layout_enricher/layout_enricher")
+        other_cmd.append("jq --compact-output .")
 
         all_cmds = " ".join(cmd_list) + " | " + " | ".join(other_cmd)
 
         print(all_cmds)
         try:
-            output = subprocess.check_output(all_cmds, shell=True, encoding='UTF-8')
+            output = subprocess.check_output(all_cmds, shell=True, encoding="UTF-8")
             shelve_cache[key] = output
         except:
             return abort(404)
@@ -96,90 +99,147 @@ def main():
 def upload_features():
     print("upload_features")
     # http://flask.pocoo.org/docs/1.0/patterns/fileuploads/
-    organism = request.args.get('organism')
-    cell_type = request.args.get('cell_type')
+    organism = request.args.get("organism")
+    cell_type = request.args.get("cell_type")
     print(request.files["features"])
     features_file_object = request.files["features"]
     features_filename = secure_filename(features_file_object.filename)
-    features_path = os.path.join(app.config['UPLOAD_FOLDER'], features_filename)
+    features_path = os.path.join(app.config["UPLOAD_FOLDER"], features_filename)
     features_file_object.save(features_path)
     # https://stackoverflow.com/a/28305785
     # uncompressed = gzip.decompress(features_file_object.read())
-    headers_number = int(subprocess.check_output(" ".join(["zcat", features_path, "|", "head -n1", "|", "sed 's/[^\t]//g'", "|", "awk '{print length + 1}'"]), shell=True).strip())
+    headers_number = int(
+        subprocess.check_output(
+            " ".join(
+                [
+                    "zcat",
+                    features_path,
+                    "|",
+                    "head -n1",
+                    "|",
+                    "sed 's/[^\t]//g'",
+                    "|",
+                    "awk '{print length + 1}'",
+                ]
+            ),
+            shell=True,
+        ).strip()
+    )
 
     features_file_type = "unknown"
-    if (headers_number == 4):
+    if headers_number == 4:
         features_file_type = "chromhmm"
-    elif (headers_number == 6):
+    elif headers_number == 6:
         features_file_type = "BED6"
-    elif (headers_number == 9):
+    elif headers_number == 9:
         features_file_type = "broad_peaks"
-    elif (headers_number == 10):
+    elif headers_number == 10:
         features_file_type = "narrow_peaks"
 
     print("Header: Number of columns = " + str(headers_number))
-    task = processing_features.apply_async(args=(organism, cell_type, features_path, features_file_type))
-    return jsonify({}), 202, {'Access-Control-Expose-Headers': 'Location', 'Location': url_for('features_task', task_id=task.id)}
+    task = processing_features.apply_async(
+        args=(organism, cell_type, features_path, features_file_type)
+    )
+    return (
+        jsonify({}),
+        202,
+        {
+            "Access-Control-Expose-Headers": "Location",
+            "Location": url_for("features_task", task_id=task.id),
+        },
+    )
 
 
 @celery.task(bind=True)
 def processing_features(self, organism, cell_type, features_file, features_file_type):
     tmp_dir = tempfile.mkdtemp()
-    fifo_file = os.path.join(tmp_dir, 'fifo')
+    fifo_file = os.path.join(tmp_dir, "fifo")
     os.mkfifo(fifo_file)
-    os.makedirs(os.path.join(tmp_dir, organism, cell_type, "chromosomes"), exist_ok=True)  #
-    subprocess.Popen(" ".join(["Rscript merge_features.R", "--fifo_file", fifo_file, "--organism", organism, "--cell_type", cell_type, "--features_file", features_file, "--features_file_type", features_file_type]), shell=True, encoding="UTF-8")
+    os.makedirs(
+        os.path.join(tmp_dir, organism, cell_type, "chromosomes"), exist_ok=True
+    )  #
+    subprocess.check_output(
+        " ".join(
+            [
+                "Rscript merge_features.R",
+                "--fifo_file",
+                fifo_file,
+                "--organism",
+                organism,
+                "--cell_type",
+                cell_type,
+                "--features_file",
+                features_file,
+                "--features_file_type",
+                features_file_type,
+            ]
+        ),
+        shell=True,
+        encoding="UTF-8",
+    )
 
     start_time = time.time()
-    fifo_data = ''
+    fifo_data = ""
     while fifo_data != "QUIT":
         with open(fifo_file, "r") as fifo:
             while True:
                 fifo_data = fifo.read().strip()
-                if len(fifo_data) == 0 or fifo_data == 'QUIT':
+                if len(fifo_data) == 0 or fifo_data == "QUIT":
                     break
-                counter = re.search(r':\s*(\d+)', fifo_data)[1]
+                counter = re.search(r":\s*(\d+)", fifo_data)[1]
 
                 r_progress_info = fifo_data.split(":")[0]
-                self.update_state(state='PROGRESS', meta={'percentage': counter, 'total': 100, 'message': r_progress_info + "..."})
+                self.update_state(
+                    state="PROGRESS",
+                    meta={
+                        "percentage": counter,
+                        "total": 100,
+                        "message": r_progress_info + "...",
+                    },
+                )
     # os.remove(fifo_file)
     # os.rmdir(tmp_dir)
     elapsed_time = time.time() - start_time
     print("Elapsed time", elapsed_time)
 
-    return {'percentage': 100, 'total': 100, 'message': 'Features file processed successfully', 'result': 42}
+    return {
+        "percentage": 100,
+        "total": 100,
+        "message": "Features file processed successfully",
+        "result": 42,
+    }
 
 
-@app.route('/status/<task_id>')
+@app.route("/status/<task_id>")
 def features_task(task_id):
     task = processing_features.AsyncResult(task_id)
-    if task.state == 'PENDING':
+    if task.state == "PENDING":
         # job did not start yet
         response = {
-            'state': task.state,
-            'percentage': 0,
-            'total': 1,
-            'message': 'Uploading features file...'
+            "state": task.state,
+            "percentage": 0,
+            "total": 1,
+            "message": "Uploading features file...",
         }
-    elif task.state != 'FAILURE':
+    elif task.state != "FAILURE":
         response = {
-            'state': task.state,
-            'percentage': task.info.get('percentage', 0),
-            'total': task.info.get('total', 1),
-            'message': task.info.get('message', '')
+            "state": task.state,
+            "percentage": task.info.get("percentage", 0),
+            "total": task.info.get("total", 1),
+            "message": task.info.get("message", ""),
         }
-        if 'result' in task.info:
-            response['result'] = task.info['result']
+        if "result" in task.info:
+            response["result"] = task.info["result"]
     else:
         # something went wrong in the background job
         response = {
-            'state': task.state,
-            'percentage': 1,
-            'total': 1,
-            'message': str(task.info),  # this is the exception raised
+            "state": task.state,
+            "percentage": 1,
+            "total": 1,
+            "message": str(task.info),  # this is the exception raised
         }
     return jsonify(response)
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0')
+    app.run(host="0.0.0.0")
