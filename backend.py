@@ -1,14 +1,14 @@
+import gzip
+import json
+import os
+import re
+import shelve
+import shutil
 import subprocess
+import tempfile
+from celery import Celery
 from flask import Flask, request, abort, jsonify, url_for
 from flask_cors import CORS
-import shelve
-from celery import Celery
-
-import tempfile
-import os
-import shutil
-import re
-import gzip
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = "/tmp/flask_uploads"
@@ -199,7 +199,10 @@ def processing_features(
 
     features = None
     with open(os.path.join(tmp_dir, "features.json"), "r") as f:
-        features = f.read()
+        features = json.loads(f.read())
+    features_metadata = None
+    with open(os.path.join(tmp_dir, "features_metadata.json"), "r") as f:
+        features_metadata = json.loads(f.read())
 
     os.remove(fifo_file)
     shutil.rmtree(tmp_dir)
@@ -208,7 +211,7 @@ def processing_features(
         "percentage": 100,
         "total": 100,
         "message": "Features file processed successfully",
-        "result": features,
+        "result": {"features": features, "features_metadata": features_metadata},
     }
 
 
