@@ -5,7 +5,6 @@ library(tibble)
 library(dplyr)
 library(rjson)
 suppressPackageStartupMessages(library(chaser))
-# suppressPackageStartupMessages(library(doParallel))
 
 source("./network_generator_lib.R")
 
@@ -74,6 +73,7 @@ po_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(c
 features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
 
 features <- as_tibble(chaser_net$features, rownames = "fragment")
+colnames(features)[2] <- feature_name
 
 features$fragment <- sapply(features$fragment, function(fragment) {
   str_remove(str_replace(str_split(fragment, fixed("-"))[[1]][1], fixed(":"), fixed("_")), fixed("chr"))
@@ -81,7 +81,7 @@ features$fragment <- sapply(features$fragment, function(fragment) {
 
 features <- features %>% select(fragment, everything())
 
-features_for_json <- as.list(features[feature_name])[[1]]
+features_for_json <- pull(features, feature_name)
 names(features_for_json) <- features$fragment
 json <- list(features_for_json)
 names(json) <- feature_name
