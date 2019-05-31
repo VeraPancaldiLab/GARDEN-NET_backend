@@ -132,10 +132,8 @@ def upload_features():
         features_file_type = "chromhmm"
     elif headers_number == 6:
         features_file_type = "BED6"
-    elif headers_number == 9:
-        features_file_type = "broad_peaks"
-    elif headers_number == 10:
-        features_file_type = "narrow_peaks"
+    elif headers_number == 9 or headers_number == 10:
+        features_file_type = "macs2"
 
     # print("Header: Number of columns = " + str(headers_number))
     task = processing_features.apply_async(

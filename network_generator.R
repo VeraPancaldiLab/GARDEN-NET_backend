@@ -42,10 +42,10 @@ if (!is.null(args$chromosome)) {
     PCHiC <- PCHiC[PCHiC$type == "P-P", ]
   }
 }
-
 # No promoters promoters interaction network
 if (nrow(PCHiC) == 0) {
   cat("{}")
+
   quit(status = 0)
 }
 
@@ -189,9 +189,14 @@ if (is.null(required_subnet)) {
         # All network
         net_features_metadata <- generate_features_metadata(chaser_net, randomize = 100)
         # PP network only
-        pp_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method = "bb"))
+        baits <- unique(chaser::export(chaser_net, "edges")$node_from)
+        chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+        pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
         # PO network only
-        po_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method = "bo"))
+        all_oes <- unique(chaser::export(chaser_net, "edges")$node_to)
+        oes <- all_oes[!(all_oes %in% baits)]
+        chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+        po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
         features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
         write(toJSON(features_metadata), file = file.path(output_folder, organism, cell_type, "features_metadata.json"))
         curated_PCHiC_vertex[, initial_features_position:length(curated_PCHiC_vertex)] <- round(curated_PCHiC_vertex[, initial_features_position:length(curated_PCHiC_vertex)], 2)

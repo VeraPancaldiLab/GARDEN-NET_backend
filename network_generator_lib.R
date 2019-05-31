@@ -372,7 +372,7 @@ generate_features_metadata <- function(chaser_net, randomize = 0) {
 
   if (randomize != 0) {
     # Calculate random ChAs
-    random_chas_list <- chas(chaser_net, nrandom = randomize, preserve.baits = T)
+    random_chas_list <- chas(chaser_net, nrandom = randomize, preserve.nodes = T)
 
     random_chas_min <- c()
     random_chas_max <- c()

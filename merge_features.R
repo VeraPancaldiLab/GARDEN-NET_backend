@@ -59,7 +59,9 @@ if (!is.null(args$fifo_file)) {
   con <- pipe(paste("echo 'Generating features metadata for PP only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
   close(con)
 }
-pp_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method = "bb"))
+baits <- unique(chaser::export(chaser_net, "edges")$node_from)
+chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
 
 counter <- counter + 1
 
@@ -68,7 +70,10 @@ if (!is.null(args$fifo_file)) {
   con <- pipe(paste("echo 'Generating features metadata for PO only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
   close(con)
 }
-po_net_features_metadata <- generate_features_metadata(chaser::subset_chromnet(chaser_net, method = "bo"))
+all_oes <- unique(chaser::export(chaser_net, "edges")$node_to)
+oes <- all_oes[!(all_oes %in% baits)]
+chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
 
 features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
 
