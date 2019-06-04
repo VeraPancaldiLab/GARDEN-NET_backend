@@ -16,8 +16,9 @@ parser <- add_option(parser, "--features_file", help = "Features file")
 parser <- add_option(parser, "--features_file_type", help = "Features file type")
 args <- commandArgs(trailingOnly = TRUE)
 args <- parse_args(parser, args, convert_hyphens_to_underscores = T)
-# args <- parse_args(parser, args = c("--organism", "Mus_musculus", "--cell_type", "Embryonic_stem_cells"))
-# args <- parse_args(parser, args = c("--organism", "Homo_sapiens", "--cell_type", "Mon", "--features_file", "/tmp/ngoc/mon/S01RHSH1.ERX1305388.H3K27me3.bwa.GRCh38.broad.20160630.bed", "--features_file_type", "broad_peaks"))
+# args <- parse_args(parser, args = c("--organism", "Mus_musculus", "--cell_type", "Embryonic_stem_cells", "--features_file", "/mnt/SERVER-CRCT-STORAGE/CRCT21/Private/Common/forGARDEN-NET/mean_efficiency_wt_mm9_good_1.bed", "--features_file_type", "bed6"))
+# args <- parse_args(parser, args = c("--organism", "Mus_musculus", "--cell_type", "Embryonic_stem_cells", "--features_file", "/tmp/ngoc/mon/S01RHSH1.ERX1305388.H3K27me3.bwa.GRCh38.broad.20160630.bed", "--features_file_type", "macs2"))
+# args <- parse_args(parser, args = c("--organism", "Homo_sapiens", "--cell_type", "Mon", "--features_file", "/tmp/ngoc/mon/S01RHSH1.ERX1305388.H3K27me3.bwa.GRCh38.broad.20160630.bed", "--features_file_type", "macs2"))
 
 # Load Rdata from merge_features cache
 load(file.path("data", args$organism, args$cell_type, "merge_features_cache.Rdata"))
@@ -30,7 +31,7 @@ if (!is.null(args$fifo_file)) {
 
 counter <- 1
 
-total <- 4
+total <- 5
 
 # All network
 if (!is.null(args$fifo_file)) {
@@ -50,7 +51,7 @@ tryCatch({
 
   # All network
   if (!is.null(args$fifo_file)) {
-    con <- pipe(paste("echo 'Generating features metadata for all network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+    con <- pipe(paste("echo 'Generating features metadata for whole network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
     close(con)
   }
 
@@ -87,7 +88,6 @@ tryCatch({
     str_remove(str_replace(str_split(fragment, fixed("-"))[[1]][1], fixed(":"), fixed("_")), fixed("chr"))
   })
 
-  print(features %>% head())
   features <- features %>% select(fragment, everything())
 
   features_for_json <- pull(features, feature_name)
