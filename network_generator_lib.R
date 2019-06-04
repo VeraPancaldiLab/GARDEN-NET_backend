@@ -560,6 +560,24 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "ensembl"] <- promoters_merged_alias_collapsed$ensembl
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "gene_type"] <- promoters_merged_alias_collapsed$gene_type
 
+  # Remove repetitions
+  curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>%
+    mutate(gene_names = sapply(gene_names, function(gene_name) {
+      paste(unique(str_split(gene_name, fixed(" "))[[1]]), collapse = " ")
+    })) %>%
+    mutate(alias = sapply(alias, function(a) {
+      paste(unique(str_split(a, fixed(" "))[[1]]), collapse = " ")
+    })) %>%
+    mutate(ensembl = sapply(ensembl, function(e) {
+      paste(unique(str_split(e, fixed(" "))[[1]]), collapse = " ")
+    })) %>%
+    mutate(gene_type = sapply(gene_type, function(gt) {
+      paste(unique(str_split(gt, fixed(" "))[[1]]), collapse = " ")
+    })) %>%
+    mutate(hgnc = sapply(hgnc, function(h) {
+      paste(unique(str_split(h, fixed(" "))[[1]]), collapse = " ")
+    }))
+
   curated_PCHiC_vertex_with_alias
 }
 
@@ -662,6 +680,21 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "mgi"] <- promoters_merged_alias_collapsed$mgi
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "ensembl"] <- promoters_merged_alias_collapsed$ensembl
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "gene_type"] <- promoters_merged_alias_collapsed$gene_type
+
+  # Remove repetitions
+  curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>%
+    mutate(gene_names = sapply(gene_names, function(gene_name) {
+      paste(unique(str_split(gene_name, fixed(" "))[[1]]), collapse = " ")
+    })) %>%
+    mutate(mgi = sapply(mgi, function(m) {
+      paste(unique(str_split(m, fixed(" "))[[1]]), collapse = " ")
+    })) %>%
+    mutate(ensembl = sapply(ensembl, function(e) {
+      paste(unique(str_split(e, fixed(" "))[[1]]), collapse = " ")
+    })) %>%
+    mutate(gene_type = sapply(gene_type, function(gt) {
+      paste(unique(str_split(gt, fixed(" "))[[1]]), collapse = " ")
+    }))
 
   curated_PCHiC_vertex_with_alias
 }
