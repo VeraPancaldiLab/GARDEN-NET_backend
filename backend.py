@@ -6,7 +6,9 @@ import shelve
 import shutil
 import subprocess
 import tempfile
-from celery import Celery
+import traceback
+from celery import Celery, states
+from celery.exceptions import Ignore
 from flask import Flask, request, abort, jsonify, url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -153,10 +155,23 @@ def upload_features():
 def processing_features(
     self, tmp_dir, organism, cell_type, features_file, features_file_type
 ):
+
+    if features_file_type == "unknown":
+        self.update_state(
+            state="FAILURE",
+            # https://www.distributedpython.com/2018/09/28/celery-task-states/
+            meta={
+                "percentage": 1,
+                "total": 1,
+                "message": "Error unknown feature file format!",
+                "exc_message": "Error unknown feature file format!",
+                "exc_type": "str",
+            },
+        )
     fifo_file = os.path.join(tmp_dir, "fifo")
     os.mkfifo(fifo_file)
 
-    subprocess.Popen(
+    R_process = subprocess.Popen(
         " ".join(
             [
                 "Rscript merge_features.R",
@@ -194,6 +209,23 @@ def processing_features(
                         "message": r_progress_info + "...",
                     },
                 )
+
+    return_code = R_process.returncode
+
+    if return_code != 0 and return_code is not None:
+        self.update_state(
+            state="FAILURE",
+            # https://www.distributedpython.com/2018/09/28/celery-task-states/
+            meta={
+                "percentage": 1,
+                "total": 1,
+                "message": "Error proccesing the feature file!",
+                "exc_message": "Error proccesing the feature file!",
+                "exc_type": "str",
+            },
+        )
+        # ignore the task so no other state is recorded
+        raise Ignore()
 
     features = None
     with open(os.path.join(tmp_dir, "features.json"), "r") as f:
@@ -235,11 +267,19 @@ def features_task(task_id):
             response["result"] = task.info["result"]
     else:
         # something went wrong in the background job
+        # celery.backends.base.str -> str
+        message = (
+            str(task.info)
+            .replace("'", "")
+            .replace(", ", "")
+            .replace("(", "")
+            .replace(")", "")
+        )
         response = {
             "state": task.state,
             "percentage": 1,
             "total": 1,
-            "message": str(task.info),  # this is the exception raised
+            "message": message,  # this is the exception raised
         }
     return jsonify(response)
 
