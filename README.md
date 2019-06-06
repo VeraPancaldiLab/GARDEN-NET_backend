@@ -162,9 +162,11 @@ Backend for the [network_generator.R](network_generator.R) script
   - [Flask](http://flask.pocoo.org/)
   - [Flask-CORS](https://flask-cors.readthedocs.io/)
   - [gunicorn](https://github.com/benoitc/gunicorn/)
+  - [celery](http://www.celeryproject.org/)
 
 ### Usage
 gunicorn --bind 0.0.0.0:5000 wsgi:app
+celery -A backend.celery worker -l info
 
 ## Docker deployment
 ### Build image

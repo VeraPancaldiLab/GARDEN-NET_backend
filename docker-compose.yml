@@ -1,12 +1,36 @@
 version: '3'
 services:
   backend:
-    image: garden-net_utils
-    ports:
-      - 5000:5000
+    image: garden-net_utils-upload_features
+    # ports: # LOCAL
+    #   - 5000:5000 # LOCAL
     volumes:
       - .:/garden-net_utils
       - ../garden-net/data:/garden-net_utils/data
+      - tmp:/tmp/
     working_dir: /garden-net_utils
     restart: always
-    command: 'gunicorn --workers 9 --bind unix:backend.sock wsgi:app'
+    command: 'gunicorn --workers 9 --bind unix:backend.sock wsgi:app' # SERVER
+    # command: 'gunicorn --bind 0.0.0.0:5000 wsgi:app' # LOCAL
+  redis:
+    image: redis:alpine
+    depends_on:
+      - backend
+    restart: always
+  celery:
+    image: garden-net_utils-upload_features
+    depends_on:
+      - backend
+      - redis
+    links:
+      - redis
+    volumes:
+      - .:/garden-net_utils
+      - ../garden-net/data:/garden-net_utils/data
+      - tmp:/tmp/
+    working_dir: /garden-net_utils
+    restart: always
+    command: 'celery -A backend.celery worker -l info'
+
+volumes:
+  tmp:
