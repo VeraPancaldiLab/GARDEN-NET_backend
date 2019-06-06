@@ -72,7 +72,7 @@ search_vertex_by_name <- function(vertex, net) {
       # Always search in lowercase
       vertex <- str_to_lower(vertex)
 
-      searched_vertex_index <- which(str_detect(str_to_lower(V(net)$gene_names), fixed(vertex)))
+    searched_vertex_index <- which(str_detect(str_to_lower(V(net)$gene_names), regex(paste0("\\b", vertex, "\\b"))))
 
       if (length(searched_vertex_index) == 0) {
         return(NULL)
