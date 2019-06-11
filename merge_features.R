@@ -82,7 +82,9 @@ tryCatch({
   features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
 
   features <- as_tibble(chaser_net$features, rownames = "fragment")
-  colnames(features)[2] <- feature_name
+  if (args$features_file_type == "macs2" || args$features_file_type == "BED6") {
+    colnames(features)[2] <- feature_name
+  }
 
   features$fragment <- sapply(features$fragment, function(fragment) {
     str_remove(str_replace(str_split(fragment, fixed("-"))[[1]][1], fixed(":"), fixed("_")), fixed("chr"))
@@ -90,13 +92,16 @@ tryCatch({
 
   features <- features %>% select(fragment, everything())
 
-  features_for_json <- pull(features, feature_name)
-  names(features_for_json) <- features$fragment
-  json <- list(features_for_json)
-  names(json) <- feature_name
+  to_json <- list()
+  for (index in 2:length(colnames(features))) {
+    feature <- colnames(features)[index]
+    features_for_json <- pull(features, feature)
+    names(features_for_json) <- features$fragment
+    to_json[[feature]] <- features_for_json
+  }
 
-  write(toJSON(json), file.path(tmp_dir_path, "features.json"))
-  write(toJSON(json), "/tmp/features.json")
+
+  write(toJSON(to_json), file.path(tmp_dir_path, "features.json"))
   write(toJSON(features_metadata), file.path(tmp_dir_path, "features_metadata.json"))
 },
 error = function(cond) {
