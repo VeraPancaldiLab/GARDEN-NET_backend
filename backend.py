@@ -7,9 +7,15 @@ import shutil
 import subprocess
 import tempfile
 import traceback
-from celery import Celery, states
+
+from celery import Celery
+from celery import states
 from celery.exceptions import Ignore
-from flask import Flask, request, abort, jsonify, url_for
+from flask import abort
+from flask import Flask
+from flask import jsonify
+from flask import request
+from flask import url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
