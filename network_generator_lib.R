@@ -358,7 +358,7 @@ generate_input_chaser_features <- function(curated_PCHiC_vertex, initial_feature
   chaser_features <- curated_PCHiC_vertex
   chaser_features$fragment <- paste(curated_PCHiC_vertex$chr, paste(curated_PCHiC_vertex$start, curated_PCHiC_vertex$end, sep = "-"), sep = ":")
   chaser_features$fragment <- paste0("chr", chaser_features$fragment)
-  chaser_features <- select(chaser_features, c(1, initial_features_position:length(curated_PCHiC_vertex)))
+  chaser_features <- dplyr::select(chaser_features, c(1, initial_features_position:length(curated_PCHiC_vertex)))
   chaser_features_df <- as.data.frame(chaser_features)
   rownames(chaser_features_df) <- chaser_features_df[, 1]
   chaser_features_df[, 1] <- NULL
@@ -498,7 +498,7 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
       mutate(ensembl = str_trim(str_remove_all(collapsed_ensembl, "\\bNA\\b"))) %>%
       mutate(gene_type = str_trim(str_remove_all(collapsed_gene_type, "\\bNA\\b"))) %>%
       mutate(hgnc = str_trim(str_remove_all(collapsed_hgnc, "\\bNA\\b"))) %>%
-      select(-c(range, collapsed_name, collapsed_gene_type, collapsed_ensembl, collapsed_hgnc, collapsed_alias))
+      dplyr::select(-c(range, collapsed_name, collapsed_gene_type, collapsed_ensembl, collapsed_hgnc, collapsed_alias))
     curated_PCHiC_vertex_with_alias$gene_names[is.na(curated_PCHiC_vertex_with_alias$gene_names)] <- c("")
     curated_PCHiC_vertex_with_alias$hgnc[is.na(curated_PCHiC_vertex_with_alias$hgnc)] <- c("")
     curated_PCHiC_vertex_with_alias$alias[is.na(curated_PCHiC_vertex_with_alias$alias)] <- c("")
@@ -526,7 +526,7 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
   curated_bait_names_unique_df_unnested <- NULL
   if (there_are_other_ends) {
     curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>%
-      select(-c(hgnc, alias, ensembl, gene_type)) %>%
+      dplyr::select(-c(hgnc, alias, ensembl, gene_type)) %>%
       unnest()
   } else {
     curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% unnest()
@@ -534,7 +534,7 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
   alias_promoters <- alias %>%
     rename(`Gene name` = "gene_names") %>%
     mutate(gene_names = str_to_lower(gene_names)) %>%
-    select(-c(chr, start, end))
+    dplyr::select(-c(chr, start, end))
   promoters_merged_alias <- curated_bait_names_unique_df_unnested %>%
     left_join(alias_promoters, by = "gene_names") %>%
     mutate(gene_names = str_to_sentence(gene_names))
@@ -621,7 +621,7 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
       mutate(mgi = str_trim(str_remove_all(collapsed_mgi, "\\bNA\\b"))) %>%
       mutate(ensembl = str_trim(str_remove_all(collapsed_ensembl, "\\bNA\\b"))) %>%
       mutate(gene_type = str_trim(str_remove_all(collapsed_gene_type, "\\bNA\\b"))) %>%
-      select(-c(range, collapsed_name, collapsed_gene_type, collapsed_ensembl, collapsed_mgi))
+      dplyr::select(-c(range, collapsed_name, collapsed_gene_type, collapsed_ensembl, collapsed_mgi))
     curated_PCHiC_vertex_with_alias$gene_names[is.na(curated_PCHiC_vertex_with_alias$gene_names)] <- c("")
     curated_PCHiC_vertex_with_alias$mgi[is.na(curated_PCHiC_vertex_with_alias$mgi)] <- c("")
     curated_PCHiC_vertex_with_alias$mgi <- str_remove_all(curated_PCHiC_vertex_with_alias$mgi, fixed("MGI:"))
@@ -649,7 +649,7 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
   curated_bait_names_unique_df_unnested <- NULL
   if (there_are_other_ends) {
     curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>%
-      select(-c(mgi, ensembl, gene_type)) %>%
+      dplyr::select(-c(mgi, ensembl, gene_type)) %>%
       unnest()
   } else {
     curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% unnest()
@@ -657,7 +657,7 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
   alias_promoters <- alias %>%
     rename(`Gene name` = "gene_names") %>%
     mutate(gene_names = str_to_lower(gene_names)) %>%
-    select(-c(chr, start, end))
+    dplyr::select(-c(chr, start, end))
   promoters_merged_alias <- curated_bait_names_unique_df_unnested %>%
     left_join(alias_promoters, by = "gene_names") %>%
     mutate(gene_names = str_to_sentence(gene_names))
