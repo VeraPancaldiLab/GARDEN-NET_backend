@@ -536,6 +536,7 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
     mutate(gene_names = str_to_lower(gene_names)) %>%
     dplyr::select(-c(chr, start, end))
   promoters_merged_alias <- curated_bait_names_unique_df_unnested %>%
+    mutate(gene_names = str_to_lower(gene_names)) %>%
     left_join(alias_promoters, by = "gene_names") %>%
     mutate(gene_names = str_to_sentence(gene_names))
   promoters_merged_alias_collapsed <- promoters_merged_alias %>%
@@ -659,6 +660,7 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
     mutate(gene_names = str_to_lower(gene_names)) %>%
     dplyr::select(-c(chr, start, end))
   promoters_merged_alias <- curated_bait_names_unique_df_unnested %>%
+    mutate(gene_names = str_to_lower(gene_names)) %>%
     left_join(alias_promoters, by = "gene_names") %>%
     mutate(gene_names = str_to_sentence(gene_names))
   promoters_merged_alias_collapsed <- promoters_merged_alias %>%
