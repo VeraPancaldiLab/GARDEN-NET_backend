@@ -139,7 +139,7 @@ def upload_features():
     if headers_number == 4:
         features_file_type = "chromhmm"
     elif headers_number == 6:
-        features_file_type = "BED6"
+        features_file_type = "bed6"
     elif headers_number == 9 or headers_number == 10:
         features_file_type = "macs2"
 
