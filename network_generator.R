@@ -129,7 +129,7 @@ if (is.null(required_subnet)) {
 
     # Save graph metadata
     if (!is.null(args$chromosome)) {
-      write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata", paste0("chr", args$chromosome, ".json")))
+      write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata", str_c("chr", args$chromosome, ".json")))
     } else {
       write(toJSON(graph_metadata), file = file.path(output_folder, organism, cell_type, "metadata.json"))
     }
