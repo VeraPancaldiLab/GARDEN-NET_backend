@@ -65,7 +65,7 @@ parser_arguments <- function(args) {
 search_vertex_by_name <- function(vertex, net) {
   # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
   # Always return NULL if it doesn't exist the vertex in the graph
-  if (str_detect(vertex, "^(([12]?[0-9])|([XYxy]))_\\d+$")) {
+  if (str_detect(vertex, "^(([12]?[0-9])|([XYxy]))_\\d+_\\d+$")) {
     # Always use upper case here
     vertex <- str_to_upper(vertex)
     if (!vertex %in% V(net)$name) {
@@ -81,7 +81,7 @@ search_vertex_by_name <- function(vertex, net) {
     # Always search in lowercase
     vertex <- str_to_lower(vertex)
 
-    searched_vertex_index <- which(str_detect(str_to_lower(V(net)$gene_names), regex(str_c("\\b", vertex, "\\b"))))
+    searched_vertex_index <- str_which(str_to_lower(V(net)$gene_names), regex(str_c("\\b", vertex, "\\b")))
 
     if (length(searched_vertex_index) == 0) {
       return(NULL)
@@ -240,8 +240,8 @@ generate_vertex <- function(PCHiC) {
   # Join chr number with the start position
   # Also join bait and oe in the same column
   fragment <- c(
-    str_c(PCHiC$baitChr, PCHiC$baitStart, sep = "_"),
-    str_c(PCHiC$oeChr, PCHiC$oeStart, sep = "_")
+    str_c(PCHiC$baitChr, PCHiC$baitStart, PCHiC$baitEnd, sep = "_"),
+    str_c(PCHiC$oeChr, PCHiC$oeStart, PCHiC$oeEnd, sep = "_")
   )
   # Extract bait and oe names and join them to the same column
   gene_names <- c(PCHiC$baitName, PCHiC$oeName)
@@ -272,14 +272,23 @@ generate_vertex <- function(PCHiC) {
 }
 
 merge_features <- function(curated_PCHiC_vertex, features) {
-  curated_PCHiC_vertex <- left_join(curated_PCHiC_vertex, features, by = "fragment")
+  if (str_detect(features$fragment[1], "(([12]?[0-9])|([XYxy]))_\\d+-\\d+$")) {
+    curated_PCHiC_vertex <- left_join(curated_PCHiC_vertex, features, by = "fragment")
+  } else if (str_detect(features$fragment[1], "(([12]?[0-9])|([XYxy]))_\\d+$")) {
+    curated_PCHiC_vertex$fragment_tmp <- str_c(curated_PCHiC_vertex$chr, "_", curated_PCHiC_vertex$start)
+    features$fragment_tmp <- features$fragment
+    features$fragment <- NULL
+    curated_PCHiC_vertex <- left_join(curated_PCHiC_vertex, features, by = "fragment_tmp")
+    curated_PCHiC_vertex$fragment_tmp <- NULL
+  }
+  curated_PCHiC_vertex
 }
 
 
 # Generate a dataframe with the extremes of the edges
 generate_edges <- function(PCHiC) {
-  baits <- str_c(PCHiC$baitChr, PCHiC$baitStart, sep = "_")
-  oes <- str_c(PCHiC$oeChr, PCHiC$oeStart, sep = "_")
+  baits <- str_c(PCHiC$baitChr, PCHiC$baitStart, PCHiC$baitEnd, sep = "_")
+  oes <- str_c(PCHiC$oeChr, PCHiC$oeStart, PCHiC$oeEnd, sep = "_")
   curated_PCHiC_edges <- tibble(source = baits, target = oes, type = PCHiC$type)
   curated_PCHiC_edges
 }
