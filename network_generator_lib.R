@@ -257,14 +257,10 @@ generate_vertex <- function(PCHiC) {
     str_split(type, fixed("-"))[[1]][2]
   })
   type <- c(bait_types, oe_types)
-  # Only use lowercase in gene names
-  gene_names <- str_to_lower(gene_names)
   # Uniform "." and NA name to empty strings
-  gene_names <-
-    ifelse(gene_names == "." | is.na(gene_names), "", gene_names)
+  gene_names <- ifelse(gene_names == "." | is.na(gene_names), "", gene_names)
   # Remove duplicated vertex
-  curated_PCHiC_vertex <-
-    distinct(tibble(fragment, gene_names, chr, start, end, type))
+  curated_PCHiC_vertex <- distinct(tibble(fragment, gene_names, chr, start, end, type))
   # Replace separators by one space
   curated_PCHiC_vertex$gene_names <-
     str_replace_all(curated_PCHiC_vertex$gene_names, "[,;]", " ")
@@ -474,7 +470,7 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
   alias <- read_tsv(alias_file, col_types = cols(chr = col_character()))
   # First overlap others ends and annotate them
   curated_PCHiC_vertex_with_alias <- NULL
-  there_are_other_ends <- sum(curated_PCHiC_vertex$type == "O") > 0
+  there_are_other_ends <- any(curated_PCHiC_vertex$type == "O")
   if (there_are_other_ends) {
     alias_grange <- makeGRangesFromDataFrame(alias, keep.extra.columns = T)
     vertex_grange <- makeGRangesFromDataFrame(curated_PCHiC_vertex[curated_PCHiC_vertex$type == "O", ], keep.extra.columns = T)
@@ -487,53 +483,45 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
     overlaps_tibble$alias <- merged_overlaps$Alias
     overlaps_tibble$hgnc <- merged_overlaps$`HGNC ID`
 
-    # Collapse multile gene names and annotations in one string
+    # Collapse multiple gene names and annotations in one string
     collapsed_overlaps <- overlaps_tibble %>%
       group_by(range) %>%
       summarise(
-        collapsed_ensembl = str_c(ensembl, collapse = " "),
-        collapsed_name = str_c(name, collapse = " "),
-        collapsed_alias = str_c(alias, collapse = " "),
-        collapsed_hgnc = str_c(hgnc, collapse = " "),
-        collapsed_gene_type = str_c(gene_type, collapse = " ")
+        ensembl = str_c(str_replace_na(ensembl), collapse = " "),
+        name = str_c(str_replace_na(name), collapse = " "),
+        alias = str_c(str_replace_na(alias), collapse = " "),
+        hgnc = str_c(str_replace_na(hgnc), collapse = " "),
+        gene_type = str_c(str_replace_na(gene_type), collapse = " ")
       )
     # Join the new annotations the original data
     curated_PCHiC_vertex_ranges <- curated_PCHiC_vertex %>%
       mutate(range = str_c(chr, str_c(start, end, sep = "-"), sep = ":"))
     curated_PCHiC_vertex_with_alias <- left_join(curated_PCHiC_vertex_ranges, collapsed_overlaps, by = "range")
-    curated_PCHiC_vertex_with_alias$gene_names <- if_else(curated_PCHiC_vertex_with_alias$type == "O", curated_PCHiC_vertex_with_alias$collapsed_name, curated_PCHiC_vertex_with_alias$gene_names)
-    # Be sure to remove all NA
-    curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>%
-      mutate(gene_names = str_trim(str_remove_all(gene_names, "\\bNA\\b"))) %>%
-      mutate(alias = str_trim(str_remove_all(collapsed_alias, "\\bNA\\b"))) %>%
-      mutate(ensembl = str_trim(str_remove_all(collapsed_ensembl, "\\bNA\\b"))) %>%
-      mutate(gene_type = str_trim(str_remove_all(collapsed_gene_type, "\\bNA\\b"))) %>%
-      mutate(hgnc = str_trim(str_remove_all(collapsed_hgnc, "\\bNA\\b"))) %>%
-      dplyr::select(-c(range, collapsed_name, collapsed_gene_type, collapsed_ensembl, collapsed_hgnc, collapsed_alias))
-    curated_PCHiC_vertex_with_alias$gene_names[is.na(curated_PCHiC_vertex_with_alias$gene_names)] <- c("")
-    curated_PCHiC_vertex_with_alias$hgnc[is.na(curated_PCHiC_vertex_with_alias$hgnc)] <- c("")
-    curated_PCHiC_vertex_with_alias$alias[is.na(curated_PCHiC_vertex_with_alias$alias)] <- c("")
-    curated_PCHiC_vertex_with_alias$ensembl[is.na(curated_PCHiC_vertex_with_alias$ensembl)] <- c("")
-    curated_PCHiC_vertex_with_alias$gene_type[is.na(curated_PCHiC_vertex_with_alias$gene_type)] <- c("")
+    curated_PCHiC_vertex_with_alias$gene_names <- if_else(curated_PCHiC_vertex_with_alias$type == "O", curated_PCHiC_vertex_with_alias$name, curated_PCHiC_vertex_with_alias$gene_names)
+    curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>% select(-c(name, range))
   } else {
     curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex
   }
   # Then use promoters transcript names to add the missing annotations
-  bait_names <- curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", 2]
-  curated_bait_names <- sapply(bait_names, function(bait_name) {
-    str_remove_all(bait_name, "-\\d+")
+  all_bait_names <- curated_PCHiC_vertex_with_alias %>%
+    filter(type == "P") %>%
+    select(gene_names) %>%
+    mutate(all_bait_names = str_to_upper(str_c(gene_names, sep = " "))) %>%
+    pull(all_bait_names)
+  curated_bait_names <- sapply(all_bait_names, function(bait_name) {
+    str_trim(str_remove_all(bait_name, "-\\d+\\b"))
   })
   curated_bait_names_unique <- sapply(curated_bait_names, function(curated_bait_name) {
     unique(str_split(curated_bait_name, fixed(" "))[[1]])
   })
-  # curated_bait_names_unique <- sapply(curated_bait_names, function(curated_bait_name){ length(unique(str_split(curated_bait_name, fixed(" "))[[1]]))})
   names(curated_bait_names_unique) <- NULL
+  # curated_bait_names_unique <- sapply(curated_bait_names, function(curated_bait_name){ length(unique(str_split(curated_bait_name, fixed(" "))[[1]]))})
+  # names(curated_bait_names_unique) <- NULL
   # Original data with a list of promoters names
   # curated_PCHiC_vertex_with_alias$gene_names <- ifelse(curated_PCHiC_vertex_with_alias$type=="P",curated_bait_names_unique, curated_PCHiC_vertex_with_alias$gene_names)
   # Extract all promoters data to do unnest of the names and then the annotation with the symbols
-  curated_bait_names_unique_df <- curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type ==
-    "P", ]
-  curated_bait_names_unique_df$gene_names <- curated_bait_names_unique
+  curated_bait_names_unique_df <- curated_PCHiC_vertex_with_alias %>% filter(type == "P")
+  curated_bait_names_unique_df$all_bait_names <- curated_bait_names_unique
   curated_bait_names_unique_df_unnested <- NULL
   if (there_are_other_ends) {
     curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>%
@@ -543,56 +531,34 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
     curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% unnest()
   }
   alias_promoters <- alias %>%
-    rename(`Gene name` = "gene_names") %>%
-    mutate(gene_names = str_to_lower(gene_names)) %>%
+    rename(`Gene name` = "all_bait_names") %>%
+    mutate(all_bait_names = str_to_upper(all_bait_names)) %>%
     dplyr::select(-c(chr, start, end))
   promoters_merged_alias <- curated_bait_names_unique_df_unnested %>%
-    mutate(gene_names = str_to_lower(gene_names)) %>%
-    left_join(alias_promoters, by = "gene_names") %>%
-    mutate(gene_names = str_to_sentence(gene_names))
+    left_join(alias_promoters, by = "all_bait_names")
   promoters_merged_alias_collapsed <- promoters_merged_alias %>%
     group_by(fragment) %>%
     summarise(
-      gene_names = str_c(gene_names, collapse = " "),
-      ensembl = str_c(`Ensembl gene ID`, collapse = " "),
-      gene_type = str_c(`Gene type`, collapse = " "),
-      hgnc = str_c(`HGNC ID`, collapse = " "),
-      alias = str_c(Alias, collapse = " "),
+      ensembl = str_c(str_replace_na(`Ensembl gene ID`), collapse = " "),
+      gene_type = str_c(str_replace_na(`Gene type`), collapse = " "),
+      hgnc = str_c(str_replace_na(`HGNC ID`), collapse = " "),
+      alias = str_c(str_replace_na(Alias), collapse = " "),
     )
-
-  promoters_merged_alias_collapsed$gene_names[is.na(promoters_merged_alias_collapsed$gene_names)] <- c("")
-  promoters_merged_alias_collapsed$hgnc[is.na(promoters_merged_alias_collapsed$hgnc)] <- c("")
-  promoters_merged_alias_collapsed$alias[is.na(promoters_merged_alias_collapsed$alias)] <- c("")
-  promoters_merged_alias_collapsed$ensembl[is.na(promoters_merged_alias_collapsed$ensembl)] <- c("")
-  promoters_merged_alias_collapsed$gene_type[is.na(promoters_merged_alias_collapsed$gene_type)] <- c("")
 
   # Order promoters according promoters_merged_alias_collapsed
   curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>% arrange(fragment)
 
-  curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "gene_names"] <- promoters_merged_alias_collapsed$gene_names
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "alias"] <- promoters_merged_alias_collapsed$alias
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "hgnc"] <- promoters_merged_alias_collapsed$hgnc
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "ensembl"] <- promoters_merged_alias_collapsed$ensembl
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "gene_type"] <- promoters_merged_alias_collapsed$gene_type
 
-  # Remove repetitions
-  curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>%
-    mutate(gene_names = sapply(gene_names, function(gene_name) {
-      str_c(unique(str_split(gene_name, fixed(" "))[[1]]), collapse = " ")
-    })) %>%
-    mutate(alias = sapply(alias, function(a) {
-      str_c(unique(str_split(a, fixed(" "))[[1]]), collapse = " ")
-    })) %>%
-    mutate(ensembl = sapply(ensembl, function(e) {
-      str_c(unique(str_split(e, fixed(" "))[[1]]), collapse = " ")
-    })) %>%
-    mutate(gene_type = sapply(gene_type, function(gt) {
-      str_c(unique(str_split(gt, fixed(" "))[[1]]), collapse = " ")
-    })) %>%
-    mutate(hgnc = sapply(hgnc, function(h) {
-      str_c(unique(str_split(h, fixed(" "))[[1]]), collapse = " ")
-    }))
+  curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$alias) | curated_PCHiC_vertex_with_alias$alias == "NA", "alias"] <- ""
+  curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$hgnc) | curated_PCHiC_vertex_with_alias$hgnc == "NA", "hgnc"] <- ""
 
+  curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$ensembl) | curated_PCHiC_vertex_with_alias$ensembl == "NA", "ensembl"] <- ""
+  curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$gene_type) | curated_PCHiC_vertex_with_alias$gene_type == "NA", "gene_type"] <- ""
+  curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$gene_names), "gene_names"] <- ""
   curated_PCHiC_vertex_with_alias
 }
 
@@ -600,7 +566,7 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
   alias <- read_tsv(alias_file, col_types = cols(chr = col_character()))
   # First overlap others ends and annotate them
   curated_PCHiC_vertex_with_alias <- NULL
-  there_are_other_ends <- sum(curated_PCHiC_vertex$type == "O") > 0
+  there_are_other_ends <- any(curated_PCHiC_vertex$type == "O")
   if (there_are_other_ends) {
     alias_grange <- makeGRangesFromDataFrame(alias, keep.extra.columns = T)
     vertex_grange <- makeGRangesFromDataFrame(curated_PCHiC_vertex[curated_PCHiC_vertex$type == "O", ], keep.extra.columns = T)
@@ -616,37 +582,32 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
     collapsed_overlaps <- overlaps_tibble %>%
       group_by(range) %>%
       summarise(
-        collapsed_ensembl = str_c(ensembl, collapse = " "),
-        collapsed_name = str_c(name, collapse = " "),
-        collapsed_gene_type = str_c(gene_type, collapse = " "),
-        collapsed_mgi = str_c(mgi, collapse = " ")
+        ensembl = str_c(str_replace_na(ensembl), collapse = " "),
+        name = str_c(str_replace_na(name), collapse = " "),
+        gene_type = str_c(str_replace_na(gene_type), collapse = " "),
+        mgi = str_c(str_replace_na(mgi), collapse = " ")
       )
     # Join the new annotations the original data
     curated_PCHiC_vertex_ranges <- curated_PCHiC_vertex %>%
       mutate(range = str_c(chr, str_c(start, end, sep = "-"), sep = ":"))
-    original_bait_names <- curated_PCHiC_vertex_ranges$gene_names
     curated_PCHiC_vertex_with_alias <- left_join(curated_PCHiC_vertex_ranges, collapsed_overlaps, by = "range")
-    curated_PCHiC_vertex_with_alias$gene_names <- if_else(curated_PCHiC_vertex_with_alias$type == "O", curated_PCHiC_vertex_with_alias$collapsed_name, curated_PCHiC_vertex_with_alias$gene_names)
-    # Be sure to remove all NA
-    curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>%
-      mutate(gene_names = str_trim(str_remove_all(gene_names, "\\bNA\\b"))) %>%
-      mutate(mgi = str_trim(str_remove_all(collapsed_mgi, "\\bNA\\b"))) %>%
-      mutate(ensembl = str_trim(str_remove_all(collapsed_ensembl, "\\bNA\\b"))) %>%
-      mutate(gene_type = str_trim(str_remove_all(collapsed_gene_type, "\\bNA\\b"))) %>%
-      dplyr::select(-c(range, collapsed_name, collapsed_gene_type, collapsed_ensembl, collapsed_mgi))
-    curated_PCHiC_vertex_with_alias$gene_names[is.na(curated_PCHiC_vertex_with_alias$gene_names)] <- c("")
-    curated_PCHiC_vertex_with_alias$mgi[is.na(curated_PCHiC_vertex_with_alias$mgi)] <- c("")
+    curated_PCHiC_vertex_with_alias$gene_names <- if_else(curated_PCHiC_vertex_with_alias$type == "O", str_to_upper(curated_PCHiC_vertex_with_alias$name), curated_PCHiC_vertex_with_alias$gene_names)
+
     curated_PCHiC_vertex_with_alias$mgi <- str_remove_all(curated_PCHiC_vertex_with_alias$mgi, fixed("MGI:"))
-    curated_PCHiC_vertex_with_alias$ensembl[is.na(curated_PCHiC_vertex_with_alias$ensembl)] <- c("")
-    curated_PCHiC_vertex_with_alias$gene_type[is.na(curated_PCHiC_vertex_with_alias$gene_type)] <- c("")
+    curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>% select(-c(name, range))
   } else {
     curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex
   }
   # Then use promoters transcript names to add the missing annotations
-  bait_names <- curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", 2]
-  curated_bait_names <- sapply(bait_names, function(bait_name) {
-    str_remove_all(bait_name, "-\\d+")
+  all_bait_names <- curated_PCHiC_vertex_with_alias %>%
+    filter(type == "P") %>%
+    select(gene_names) %>%
+    mutate(all_bait_names = str_to_upper(gene_names)) %>%
+    pull(all_bait_names)
+  curated_bait_names <- sapply(all_bait_names, function(bait_name) {
+    str_trim(str_remove_all(bait_name, "-\\d+\\b"))
   })
+
   curated_bait_names_unique <- sapply(curated_bait_names, function(curated_bait_name) {
     unique(str_split(curated_bait_name, fixed(" "))[[1]])
   })
@@ -655,62 +616,47 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
   # Original data with a list of promoters names
   # curated_PCHiC_vertex_with_alias$gene_names <- ifelse(curated_PCHiC_vertex_with_alias$type=="P",curated_bait_names_unique, curated_PCHiC_vertex_with_alias$gene_names)
   # Extract all promoters data to do unnest of the names and then the annotation with the symbols
-  curated_bait_names_unique_df <- curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type ==
-    "P", ]
-  curated_bait_names_unique_df$gene_names <- curated_bait_names_unique
+  curated_bait_names_unique_df <- curated_PCHiC_vertex_with_alias %>% filter(type == "P")
+  curated_bait_names_unique_df$all_bait_names <- curated_bait_names_unique
   curated_bait_names_unique_df_unnested <- NULL
   if (there_are_other_ends) {
     curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>%
       dplyr::select(-c(mgi, ensembl, gene_type)) %>%
       unnest()
   } else {
-    curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% unnest()
+    curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% tidyr::unnest()
   }
   alias_promoters <- alias %>%
-    rename(`Gene name` = "gene_names") %>%
-    mutate(gene_names = str_to_lower(gene_names)) %>%
+    rename(`Gene name` = "all_bait_names") %>%
+    mutate(all_bait_names = str_to_upper(all_bait_names)) %>%
     dplyr::select(-c(chr, start, end))
   promoters_merged_alias <- curated_bait_names_unique_df_unnested %>%
-    mutate(gene_names = str_to_lower(gene_names)) %>%
-    left_join(alias_promoters, by = "gene_names") %>%
-    mutate(gene_names = str_to_sentence(gene_names))
+    mutate(gene_names = str_to_upper(all_bait_names)) %>%
+    left_join(alias_promoters, by = "all_bait_names") %>%
+    mutate(gene_names = str_to_sentence(all_bait_names))
   promoters_merged_alias_collapsed <- promoters_merged_alias %>%
     group_by(fragment) %>%
     summarise(
-      gene_names = str_c(gene_names, collapse = " "),
-      ensembl = str_c(`Ensembl gene ID`, collapse = " "),
-      gene_type = str_c(`Gene type`, collapse = " "),
-      mgi = str_c(`MGI ID`, collapse = " ")
+      gene_names = str_c(str_replace_na(gene_names), collapse = " "),
+      ensembl = str_c(str_replace_na(`Ensembl gene ID`), collapse = " "),
+      gene_type = str_c(str_replace_na(`Gene type`), collapse = " "),
+      mgi = str_c(str_replace_na(`MGI ID`), collapse = " ")
     )
 
-  promoters_merged_alias_collapsed$gene_names[is.na(promoters_merged_alias_collapsed$gene_names)] <- c("")
-  promoters_merged_alias_collapsed$mgi[is.na(promoters_merged_alias_collapsed$mgi)] <- c("")
   promoters_merged_alias_collapsed$mgi <- str_remove_all(promoters_merged_alias_collapsed$mgi, fixed("MGI:"))
-  promoters_merged_alias_collapsed$ensembl[is.na(promoters_merged_alias_collapsed$ensembl)] <- c("")
-  promoters_merged_alias_collapsed$gene_type[is.na(promoters_merged_alias_collapsed$gene_type)] <- c("")
 
   # Order promoters according promoters_merged_alias_collapsed
   curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>% arrange(fragment)
 
-  curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "gene_names"] <- promoters_merged_alias_collapsed$gene_names
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "mgi"] <- promoters_merged_alias_collapsed$mgi
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "ensembl"] <- promoters_merged_alias_collapsed$ensembl
   curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "gene_type"] <- promoters_merged_alias_collapsed$gene_type
 
-  # Remove repetitions
-  curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>%
-    mutate(gene_names = sapply(gene_names, function(gene_name) {
-      str_c(unique(str_split(gene_name, fixed(" "))[[1]]), collapse = " ")
-    })) %>%
-    mutate(mgi = sapply(mgi, function(m) {
-      str_c(unique(str_split(m, fixed(" "))[[1]]), collapse = " ")
-    })) %>%
-    mutate(ensembl = sapply(ensembl, function(e) {
-      str_c(unique(str_split(e, fixed(" "))[[1]]), collapse = " ")
-    })) %>%
-    mutate(gene_type = sapply(gene_type, function(gt) {
-      str_c(unique(str_split(gt, fixed(" "))[[1]]), collapse = " ")
-    }))
+  curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$mgi) | curated_PCHiC_vertex_with_alias$mgi == "NA", "mgi"] <- ""
+
+  curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$ensembl) | curated_PCHiC_vertex_with_alias$ensembl == "NA", "ensembl"] <- ""
+  curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$gene_type) | curated_PCHiC_vertex_with_alias$gene_type == "NA", "gene_type"] <- ""
+  curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$gene_names), "gene_names"] <- ""
 
   curated_PCHiC_vertex_with_alias
 }
