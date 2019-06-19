@@ -9,6 +9,9 @@ parser_arguments <- function(args) {
   parser <- add_option(parser, "--features",
     help = "Separated values file of features as input file"
   )
+  parser <- add_option(parser, "--bait_names",
+    help = "Separated values file of bait names as input file"
+  )
   parser <- add_option(parser, "--alias",
     help = "Separated values file of alias as input file"
   )
@@ -712,4 +715,21 @@ generate_intronics_regions <- function(curated_PCHiC_vertex, intronic_regions_fi
   curated_PCHiC_vertex$intronic_regions <- F
   curated_PCHiC_vertex$intronic_regions[query_hits] <- ifelse(curated_PCHiC_vertex$type[query_hits] == "O", T, F)
   curated_PCHiC_vertex
+}
+
+generate_real_bait_names <- function(curated_PCHiC_vertex, real_bait_names_file) {
+  real_bait_names <- read_tsv(real_bait_names_file, col_types = cols(Chr = col_character()))
+  real_bait_names <- real_bait_names %>% mutate(gene_id = sapply(gene_id, function(g) {
+    str_remove_all(g, "-\\d+\\b")[[1]][1]
+  }))
+  real_bait_names <- real_bait_names %>% mutate(gene_id = sapply(gene_id, function(g) {
+    str_c(unique(str_split(g, fixed(","))[[1]]), collapse = " ")
+  }))
+  real_bait_names <- real_bait_names %>% mutate(fragment = str_c(Chr, Start, End, sep = "_"))
+
+  merged_curated_PCHiC_vertex_with_baits <- left_join(curated_PCHiC_vertex, real_bait_names, by = "fragment")
+  merged_curated_PCHiC_vertex_with_baits[merged_curated_PCHiC_vertex_with_baits$type == "P", "gene_names"] <- merged_curated_PCHiC_vertex_with_baits[merged_curated_PCHiC_vertex_with_baits$type == "P", "gene_id"]
+  merged_curated_PCHiC_vertex_with_baits <- merged_curated_PCHiC_vertex_with_baits %>% select(-c(gene_id, ensembl_id, region, Chr, Start, End))
+
+  merged_curated_PCHiC_vertex_with_baits
 }

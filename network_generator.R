@@ -20,6 +20,9 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Neu.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
+# args <- parser_arguments(args = c("--PCHiC", "../GARDEN-NET_utils_related/PCHiC_peak_matrix_cutoff5.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv", "--search", "hoxa6"))
@@ -50,6 +53,11 @@ if (nrow(PCHiC) == 0) {
 }
 
 curated_PCHiC_vertex <- generate_vertex(PCHiC)
+
+if (!is.null(args$bait_names)) {
+  suppressPackageStartupMessages(library(GenomicRanges))
+  curated_PCHiC_vertex <- generate_real_bait_names(curated_PCHiC_vertex, args$bait_names)
+}
 
 if (!is.null(args$alias)) {
   suppressPackageStartupMessages(library(GenomicRanges))
@@ -140,6 +148,11 @@ if (is.null(required_subnet)) {
       # We need to take all the network for statistics insteand of chromosome network
       if (!is.null(args$chromosome)) {
         curated_PCHiC_vertex <- generate_vertex(PCHiC_ALL)
+
+        if (!is.null(args$bait_names)) {
+          suppressPackageStartupMessages(library(GenomicRanges))
+          curated_PCHiC_vertex <- generate_real_bait_names(curated_PCHiC_vertex, args$bait_names)
+        }
 
         if (!is.null(args$alias)) {
           suppressPackageStartupMessages(library(GenomicRanges))
