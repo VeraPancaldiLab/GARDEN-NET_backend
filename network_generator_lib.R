@@ -243,8 +243,6 @@ generate_vertex <- function(PCHiC) {
     str_c(PCHiC$baitChr, PCHiC$baitStart, PCHiC$baitEnd, sep = "_"),
     str_c(PCHiC$oeChr, PCHiC$oeStart, PCHiC$oeEnd, sep = "_")
   )
-  # Extract bait and oe names and join them to the same column
-  gene_names <- c(PCHiC$baitName, PCHiC$oeName)
   # Remove repeted nodes
   chr <- c(PCHiC$baitChr, PCHiC$oeChr)
   start <- c(PCHiC$baitStart, PCHiC$oeStart)
@@ -257,14 +255,21 @@ generate_vertex <- function(PCHiC) {
     str_split(type, fixed("-"))[[1]][2]
   })
   type <- c(bait_types, oe_types)
-  # Uniform "." and NA name to empty strings
-  gene_names <- ifelse(gene_names == "." | is.na(gene_names), "", gene_names)
+  # Extract bait and oe names and join them to the same column
+  gene_names <- c(PCHiC$baitName, PCHiC$oeName)
   # Remove duplicated vertex
   curated_PCHiC_vertex <- distinct(tibble(fragment, gene_names, chr, start, end, type))
-  # Replace separators by one space
-  curated_PCHiC_vertex$gene_names <-
-    str_replace_all(curated_PCHiC_vertex$gene_names, "[,;]", " ")
-  curated_PCHiC_vertex
+  # Uniform "." and NA name to empty strings
+  curated_PCHiC_vertex$gene_names <- ifelse(curated_PCHiC_vertex$gene_names == "." | is.na(curated_PCHiC_vertex$gene_names), "", curated_PCHiC_vertex$gene_names)
+  # Delete transcript names
+  curated_PCHiC_vertex$gene_names <- sapply(curated_PCHiC_vertex$gene_names, function(gene_name) {
+    str_trim(str_remove_all(gene_name, "-\\d+\\b"))
+  })
+  # Collapse unique names
+  curated_PCHiC_vertex$gene_names <- sapply(curated_PCHiC_vertex$gene_names, function(gene_name) {
+    str_c(unique(str_split(gene_name, "[ ;,]")[[1]]), collapse = " ", sep = " ")
+  })
+  distinct(curated_PCHiC_vertex)
 }
 
 merge_features <- function(curated_PCHiC_vertex, features) {
