@@ -104,7 +104,8 @@ tryCatch({
   write(toJSON(to_json), file.path(tmp_dir_path, "features.json"))
   write(toJSON(features_metadata), file.path(tmp_dir_path, "features_metadata.json"))
 },
-error = function(cond) {
+error = function(error) {
+  print(error)
   return_status <- 1
 },
 finally = {
