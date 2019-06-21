@@ -2,13 +2,15 @@ version: '3'
 services:
   backend:
     image: garden-net_backend
+    ports:
+      - 5000:5000
     volumes:
       - .:/garden-net_backend
       - ../garden-net/data:/garden-net_backend/data
       - tmp:/tmp/
     working_dir: /garden-net_backend
     restart: always
-    command: 'gunicorn --workers 9 --bind unix:backend.sock wsgi:app'
+    command: 'gunicorn --bind 0.0.0.0:5000 wsgi:app'
   redis:
     image: redis:alpine
     depends_on:
