@@ -87,7 +87,7 @@ tryCatch({
   }
 
   features$fragment <- sapply(features$fragment, function(fragment) {
-    str_remove(str_replace(str_split(fragment, fixed("-"))[[1]][1], fixed(":"), fixed("_")), fixed("chr"))
+    str_remove(str_replace_all(fragment, "[-:]", fixed("_")), fixed("chr"))
   })
 
   features <- features %>% select(fragment, everything())
