@@ -1,4 +1,8 @@
-# [GARDEN-NET](https://github.com/VeraPancaldiLab/GARDEN-NET) Utils
+# [GARDEN-NET](https://github.com/VeraPancaldiLab/GARDEN-NET) backend
+
+Backend infrastructure to provide the search, neighborhood generator and upload features components
+
+&
 
 Set of utilities and helpers for generating json networks in *cytoscape.js json* format from R dataframes to TSV format in [GARDEN-NET](https://github.com/VeraPancaldiLab/GARDEN-NET)
 
@@ -136,7 +140,7 @@ optional arguments:
 `./network_generator.R --PCHiC PCHiC_interaction_map.txt --features Features_mESC.txt --search 'Hoxa1' | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --monochrome-output --compact-output .`
 
 ### Usage - Search query
-`./search_query.R --PCHiC PCHiC_interaction_map.txt --features Features_mESC.txt --search 'Hoxa1' | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --monochrome-output --compact-output .`
+`./search_query.R -organism Mus_musculus --cell_type Embryonic_stem_cells --search 'Hoxa1' | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]\+\)\"/\1/' | ./layout_enricher/layout_enricher | jq --monochrome-output --compact-output .`
 
 ### Usage - generate images
 `cytoscape -R 1234 &`
@@ -163,23 +167,28 @@ Backend for the [network_generator.R](network_generator.R) script
   - [Flask-CORS](https://flask-cors.readthedocs.io/)
   - [gunicorn](https://github.com/benoitc/gunicorn/)
   - [celery](http://www.celeryproject.org/)
+  - [redis](https://redis.io/)
 
 ### Usage
-gunicorn --bind 0.0.0.0:5000 wsgi:app
-celery -A backend.celery worker -l info
 
 ## Docker deployment
 ### Build image
 
-docker build -t GARDEN-NET_utils
+docker build -t garden-net_backend
 
-### Run container
-#### wsgi<span/>.py development
-`docker run --rm --interactive --tty --user "$(id -u):$(id -g)" --volume "$(pwd):/cytoscape_utils" --workdir /GARDEN-NET_utils GARDEN-NET_utils sh -c "gunicorn --workers 9 --bind unix:backend.sock wsgi:app"`
+### Force to regenerate chaser package
+docker build --build-arg UPDATE_CHASER_VERSION=T -t garden-net_backend .
 
-#### wsgi<span/>.py deployment
+### Run containers
+
+#### Development
+
+docker-compose -f docker-compose.dev.yml up
+
+#### Production
+
 docker-compose up -d
 
 ##### Note about service management policy
-The responsible of serve and restart the container is docker thanks to the restart=always policy instead of using the classic systemd unit file
+The responsible of serve and restart the containers is docker thanks to the restart=always policy instead of using the classic systemd unit file
 
