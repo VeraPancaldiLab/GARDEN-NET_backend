@@ -234,14 +234,29 @@ def processing_features(
         raise Ignore()
 
     features = None
-    with open(os.path.join(tmp_dir, "features.json"), "r") as f:
-        features = json.loads(f.read())
     features_metadata = None
-    with open(os.path.join(tmp_dir, "features_metadata.json"), "r") as f:
-        features_metadata = json.loads(f.read())
+    try:
+        with open(os.path.join(tmp_dir, "features.json"), "r") as f:
+            features = json.loads(f.read())
+        with open(os.path.join(tmp_dir, "features_metadata.json"), "r") as f:
+            features_metadata = json.loads(f.read())
 
-    os.remove(fifo_file)
-    shutil.rmtree(tmp_dir)
+        os.remove(fifo_file)
+        shutil.rmtree(tmp_dir)
+    except:
+        self.update_state(
+            state="FAILURE",
+            # https://www.distributedpython.com/2018/09/28/celery-task-states/
+            meta={
+                "percentage": 1,
+                "total": 1,
+                "message": "Error proccesing the feature file!",
+                "exc_message": "Error proccesing the feature file!",
+                "exc_type": "str",
+            },
+        )
+        # ignore the task so no other state is recorded
+        raise Ignore()
 
     return {
         "percentage": 100,
