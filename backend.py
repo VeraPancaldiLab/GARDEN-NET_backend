@@ -137,7 +137,26 @@ def upload_features():
 
     features_file_type = "unknown"
     if headers_number == 4:
-        features_file_type = "chromhmm"
+        try:
+            last_column = float(
+                subprocess.check_output(
+                    " ".join(
+                        [
+                            "zcat",
+                            features_path,
+                            "|",
+                            "head -n1",
+                            "|",
+                            "awk '{print $NF}'",
+                        ]
+                    ),
+                    shell=True,
+                ).strip()
+            )
+            features_file_type = "bed3"
+        except:
+            features_file_type = "chromhmm"
+
     elif headers_number == 6:
         features_file_type = "bed6"
     elif headers_number == 9 or headers_number == 10:
