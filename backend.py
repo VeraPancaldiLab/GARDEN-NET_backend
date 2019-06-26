@@ -169,8 +169,8 @@ def processing_features(
             meta={
                 "percentage": 1,
                 "total": 1,
-                "message": "Error unknown feature file format!",
-                "exc_message": "Error unknown feature file format!",
+                "message": "Error unknown feature file format",
+                "exc_message": "Error unknown feature file format",
                 "exc_type": "str",
             },
         )
@@ -225,8 +225,8 @@ def processing_features(
             meta={
                 "percentage": 1,
                 "total": 1,
-                "message": "Error proccesing the feature file!",
-                "exc_message": "Error proccesing the feature file!",
+                "message": "Error proccesing the feature file",
+                "exc_message": "Error proccesing the feature file",
                 "exc_type": "str",
             },
         )
@@ -250,8 +250,8 @@ def processing_features(
             meta={
                 "percentage": 1,
                 "total": 1,
-                "message": "Error proccesing the feature file!",
-                "exc_message": "Error proccesing the feature file!",
+                "message": "Error proccesing the feature file",
+                "exc_message": "Error proccesing the feature file",
                 "exc_type": "str",
             },
         )
