@@ -96,8 +96,11 @@ curated_PCHiC_edges <- generate_edges(PCHiC)
 
 ## ------------------------------------------------------------------------
 # Generate the network
+# Use fragment id as igraph id
 curated_PCHiC_vertex$name <- curated_PCHiC_vertex$fragment
 net <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
+# Remove igraph id after the network generation
+curated_PCHiC_vertex$name <- NULL
 # Remove repeated edges and self loops
 # When the repeated edges are being removing take the first type (always is c("P-P, "P-P"))
 net <- simplify(net, edge.attr.comb = "first")
