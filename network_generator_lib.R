@@ -378,14 +378,14 @@ generate_input_chaser_features <- function(curated_PCHiC_vertex, initial_feature
   chaser_features_df
 }
 
-generate_features_metadata <- function(chaser_net, randomize = 0) {
+generate_features_metadata <- function(chaser_net, randomize = 0, preserve.nodes = NULL) {
   features <- sort(colnames(chaser_net$features))
 
   chas <- chas(chaser_net)
 
   if (randomize != 0) {
     # Calculate random ChAs
-    random_chaser_net_list <- chaser::randomize(chaser_net, nrandom = randomize, preserve.nodes = T)
+    random_chaser_net_list <- chaser::randomize(chaser_net, nrandom = randomize, preserve.nodes)
     random_chaser_net_list_chas <- lapply(random_chaser_net_list, function(random_chaser_net) {
       chas(random_chaser_net)
     })

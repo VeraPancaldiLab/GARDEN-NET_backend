@@ -201,12 +201,12 @@ if (is.null(required_subnet)) {
 
       if (!is.null(args$features)) {
         chaser_input_features <- generate_input_chaser_features(curated_PCHiC_vertex, initial_features_position)
-        chaser_net <- chaser::load_features(chaser_net, chaser_input_features, type = "data.frame", missingv = 0)
+        chaser_net <- chaser::load_features(chaser_net, chaser_input_features, type = "features_on_nodes", missingv = 0)
 
         # All network
-        net_features_metadata <- generate_features_metadata(chaser_net, randomize = 100)
-        # PP network only
         baits <- unique(chaser::export(chaser_net, "edges")$node_from)
+        net_features_metadata <- generate_features_metadata(chaser_net, randomize = 100, preserve.nodes = baits)
+        # PP network only
         chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
         pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
         # PO network only
