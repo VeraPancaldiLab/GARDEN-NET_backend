@@ -22,8 +22,6 @@ args <- parse_args(parser, args, convert_hyphens_to_underscores = T)
 
 # Load Rdata from merge_features cache
 load(file.path("data", args$organism, args$cell_type, "merge_features_cache.Rdata"))
-# Load Rdata from search_query cache
-load(file.path("data", args$organism, args$cell_type, "search_cache.Rdata"))
 
 if (!is.null(args$fifo_file)) {
   tmp_dir_path <- dirname(args$fifo_file)
