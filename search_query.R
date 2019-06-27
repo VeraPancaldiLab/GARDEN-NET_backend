@@ -23,7 +23,7 @@ if (str_detect(args$search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
 }
 
 # Search the required subnetwork
-required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net, curated_PCHiC_vertex)
+required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net, curated_PCHiC_vertex, ensembl2name)
 
 if (is.null(required_subnet)) {
   cat("{}")
