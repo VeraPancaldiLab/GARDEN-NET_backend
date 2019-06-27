@@ -62,7 +62,7 @@ parser_arguments <- function(args) {
   return(parse_args(parser, args, convert_hyphens_to_underscores = T))
 }
 ## ------------------------------------------------------------------------
-search_vertex_by_name <- function(vertex, net) {
+search_vertex_by_name <- function(vertex, net, ensembl2name) {
   # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
   # Always return NULL if it doesn't exist the vertex in the graph
   if (str_detect(vertex, "^(([12]?[0-9])|([XYxy]))_\\d+_\\d+$")) {
@@ -80,6 +80,12 @@ search_vertex_by_name <- function(vertex, net) {
   } else {
     # Always search in lowercase
     vertex <- str_to_lower(vertex)
+    if (str_detect(vertex, "^ens(mus)?g\\d+")) {
+      vertex <- str_to_lower(ensembl2name[str_to_upper(vertex)])
+      if (is.na(vertex)) {
+        return(NULL)
+      }
+    }
 
     searched_vertex_index <- str_which(str_to_lower(V(net)$gene_names), regex(str_c("\\b", vertex, "\\b")))
 
@@ -160,14 +166,14 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
   return(required_subnet)
 }
 ## Generate required subnetwork
-search_subnetwork <- function(search, expand, nearest, net, curated_chrs_vertex) {
+search_subnetwork <- function(search, expand, nearest, net, curated_chrs_vertex, ensembl2name) {
   if (!is.null(search)) {
     if (str_detect(search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
       # We are working with a range
       required_subnet <-
         search_vertex_by_range(search, expand, nearest, net, curated_chrs_vertex)
     } else {
-      required_subnet <- search_vertex_by_name(search, net)
+      required_subnet <- search_vertex_by_name(search, net, ensembl2name)
     }
     if (!is.null(required_subnet)) {
       # Always recalculate degrees for each neighborhood
@@ -471,8 +477,7 @@ union_graphs_with_attributes <- function(graph_list) {
   return(union_graph)
 }
 
-generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
-  alias <- read_tsv(alias_file, col_types = cols(chr = col_character()))
+generate_alias_homo <- function(curated_PCHiC_vertex, alias) {
   # First overlap others ends and annotate them
   curated_PCHiC_vertex_with_alias <- NULL
   there_are_other_ends <- any(curated_PCHiC_vertex$type == "O")
@@ -567,8 +572,7 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias_file) {
   curated_PCHiC_vertex_with_alias
 }
 
-generate_alias_mus <- function(curated_PCHiC_vertex, alias_file) {
-  alias <- read_tsv(alias_file, col_types = cols(chr = col_character()))
+generate_alias_mus <- function(curated_PCHiC_vertex, alias) {
   # First overlap others ends and annotate them
   curated_PCHiC_vertex_with_alias <- NULL
   there_are_other_ends <- any(curated_PCHiC_vertex$type == "O")
