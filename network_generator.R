@@ -62,10 +62,11 @@ if (!is.null(args$bait_names)) {
 if (!is.null(args$alias)) {
   suppressPackageStartupMessages(library(GenomicRanges))
   organism <- str_split(basename(args$PCHiC), fixed("-"))[[1]][1]
+  alias <- read_tsv(args$alias, col_types = cols(chr = col_character()))
   if (organism == "Mus_musculus") {
-    curated_PCHiC_vertex <- generate_alias_mus(curated_PCHiC_vertex, args$alias)
+    curated_PCHiC_vertex <- generate_alias_mus(curated_PCHiC_vertex, alias)
   } else if (organism == "Homo_sapiens") {
-    curated_PCHiC_vertex <- generate_alias_homo(curated_PCHiC_vertex, args$alias)
+    curated_PCHiC_vertex <- generate_alias_homo(curated_PCHiC_vertex, alias)
   }
 }
 
@@ -115,7 +116,7 @@ if (!is.null(args$search)) {
     suppressPackageStartupMessages(library(GenomicRanges))
   }
 
-  required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net, curated_PCHiC_vertex)
+  required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net, curated_PCHiC_vertex, ensembl2name)
 } else {
   required_subnet <- net
 }
@@ -157,14 +158,18 @@ if (is.null(required_subnet)) {
           curated_PCHiC_vertex <- generate_real_bait_names(curated_PCHiC_vertex, args$bait_names)
         }
 
+        ensembl2name <- NULL
         if (!is.null(args$alias)) {
           suppressPackageStartupMessages(library(GenomicRanges))
+          alias <- read_tsv(args$alias, col_types = cols(chr = col_character()))
           organism <- str_split(basename(args$PCHiC), fixed("-"))[[1]][1]
           if (organism == "Mus_musculus") {
-            curated_PCHiC_vertex <- generate_alias_mus(curated_PCHiC_vertex, args$alias)
+            curated_PCHiC_vertex <- generate_alias_mus(curated_PCHiC_vertex, alias)
           } else if (organism == "Homo_sapiens") {
-            curated_PCHiC_vertex <- generate_alias_homo(curated_PCHiC_vertex, args$alias)
+            curated_PCHiC_vertex <- generate_alias_homo(curated_PCHiC_vertex, alias)
           }
+          ensembl2name <- alias$`Gene name`
+          names(ensembl2name) <- alias$`Ensembl gene ID`
         }
 
         if (!is.null(args$intronic_regions)) {
@@ -227,7 +232,7 @@ if (is.null(required_subnet)) {
       # Save features
       write(toJSON(features), file = file.path(output_folder, organism, cell_type, "features.json"))
       # Save search cache
-      save(net, curated_PCHiC_vertex, file = file.path(output_folder, organism, cell_type, "search_cache.Rdata"), compress = F)
+      save(net, curated_PCHiC_vertex, ensembl2name, file = file.path(output_folder, organism, cell_type, "search_cache.Rdata"), compress = F)
       # Save features generation cache
       save(chaser_net, file = file.path(output_folder, organism, cell_type, "merge_features_cache.Rdata"), compress = F)
     }
