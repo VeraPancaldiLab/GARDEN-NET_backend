@@ -139,6 +139,8 @@ def upload_features():
     )
 
     features_file_type = "unknown"
+    if headers_number == 2:
+        features_file_type = "features_on_nodes"
     if headers_number == 4:
         try:
             last_column = float(
