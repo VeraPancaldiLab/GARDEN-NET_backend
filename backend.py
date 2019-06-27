@@ -20,7 +20,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = "/tmp/flask_uploads"
-ALLOWED_EXTENSIONS = set(["bed.gz"])
+ALLOWED_EXTENSIONS = set(["bed", "bed.gz"])
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -117,11 +117,14 @@ def upload_features():
     features_file_object.save(features_path)
     # https://stackoverflow.com/a/28305785
     # uncompressed = gzip.decompress(features_file_object.read())
+    cat_command = "cat"
+    if features_filename.endswith(".gz"):
+        cat_command = "zcat"
     headers_number = int(
         subprocess.check_output(
             " ".join(
                 [
-                    "zcat",
+                    cat_command,
                     features_path,
                     "|",
                     "head -n1",
@@ -142,7 +145,7 @@ def upload_features():
                 subprocess.check_output(
                     " ".join(
                         [
-                            "zcat",
+                            cat_command,
                             features_path,
                             "|",
                             "head -n1",
