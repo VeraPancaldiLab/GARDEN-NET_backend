@@ -141,24 +141,21 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_PCHiC_v
     required_subnet <- nearest_subnetwork(required_range, net, curated_PCHiC_vertex_ranges)
   } else {
     # Work with overlaps instead
-    overlaps_index <-
-      subjectHits(findOverlaps(required_range, curated_PCHiC_vertex_ranges))
-    required_vertex <-
-      curated_PCHiC_vertex_ranges[overlaps_index]$fragment
-    required_vertex_with_neighbours <-
-      names(unlist(lapply(required_vertex, function(rv) {
-        neighbors(net, rv)
-      })))
-    # Add the overlapping vertex
-    required_vertex_with_neighbours <-
-      unique(c(required_vertex_with_neighbours, required_vertex))
+    overlaps_index <- subjectHits(findOverlaps(required_range, curated_PCHiC_vertex_ranges))
+    required_vertex <- curated_PCHiC_vertex_ranges[overlaps_index]$fragment
+    required_vertex_with_neighbours <- required_vertex
+    # required_vertex_with_neighbours <-
+    #   names(unlist(lapply(required_vertex, function(rv) {
+    #     neighbors(net, rv)
+    #   })))
+    # # Add the overlapping vertex
+    required_vertex_with_neighbours <- unique(c(required_vertex_with_neighbours, required_vertex))
     if (length(required_vertex_with_neighbours) == 0) {
       required_subnet <- nearest_subnetwork(required_range, net, curated_PCHiC_vertex_ranges)
       required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
       required_subnet <- set_vertex_attr(required_subnet, "searched", index = required_vertex, value = "true")
     } else {
-      required_subnet <-
-        induced_subgraph(net, vids = required_vertex_with_neighbours)
+      required_subnet <- induced_subgraph(net, vids = required_vertex_with_neighbours)
       required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
       required_subnet <- set_vertex_attr(required_subnet, "searched", index = required_vertex, value = "true")
     }
