@@ -149,7 +149,7 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_PCHiC_v
     #     neighbors(net, rv)
     #   })))
     # # Add the overlapping vertex
-    required_vertex_with_neighbours <- unique(c(required_vertex_with_neighbours, required_vertex))
+    # required_vertex_with_neighbours <- unique(c(required_vertex_with_neighbours, required_vertex))
     if (length(required_vertex_with_neighbours) == 0) {
       required_subnet <- nearest_subnetwork(required_range, net, curated_PCHiC_vertex_ranges)
       required_subnet <- set_vertex_attr(required_subnet, "searched", value = "false")
