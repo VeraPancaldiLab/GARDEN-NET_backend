@@ -91,7 +91,8 @@ def main():
             output = subprocess.check_output(all_cmds, shell=True, encoding="UTF-8")
             shelve_cache[key] = output
         except:
-            return abort(404)
+            # 408 Request Timeout
+            return abort(408)
     else:
         output = shelve_cache[key]
 
