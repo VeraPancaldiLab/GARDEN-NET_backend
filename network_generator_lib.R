@@ -106,16 +106,14 @@ search_vertex_by_name <- function(vertex, net, ensembl2name) {
   }
 }
 
-nearest_subnetwork <- function(required_range, net, curated_chrs_vertex_ranges) {
-  nearest_range_index <-
-    nearest(required_range, curated_chrs_vertex_ranges)
-  required_vertex <-
-    curated_chrs_vertex_ranges[nearest_range_index]$fragment
-  if (is.null(required_vertex)) {
+nearest_subnetwork <- function(required_range, net, curated_PCHiC_vertex_ranges) {
+  nearest_range_index <- nearest(required_range, curated_PCHiC_vertex_ranges)
+  searched_vertex_index <- curated_PCHiC_vertex_ranges[nearest_range_index]$fragment
+  if (is.null(searched_vertex_index)) {
     required_subnet <- NULL
   } else {
     # Multiple fragments here
-    required_subnet <- make_ego_graph(net, nodes = required_vertex)
+    required_subnet <- make_ego_graph(net, nodes = searched_vertex_index)
 
     required_union_subnet <- union_graphs_with_attributes(required_subnet)
 
@@ -125,10 +123,10 @@ nearest_subnetwork <- function(required_range, net, curated_chrs_vertex_ranges) 
   return(required_subnet)
 }
 
-search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_vertex) {
-  curated_chrs_vertex_ranges <-
+search_vertex_by_range <- function(search, expand, nearest, net, curated_PCHiC_vertex) {
+  curated_PCHiC_vertex_ranges <-
     makeGRangesFromDataFrame(
-      curated_chrs_vertex,
+      curated_PCHiC_vertex,
       keep.extra.columns = T,
       ignore.strand = FALSE
     )
@@ -140,13 +138,13 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
   }
   # Work with the nearest if it is required
   if (nearest) {
-    required_subnet <- nearest_subnetwork(required_range, net, curated_chrs_vertex_ranges)
+    required_subnet <- nearest_subnetwork(required_range, net, curated_PCHiC_vertex_ranges)
   } else {
     # Work with overlaps instead
     overlaps_index <-
-      subjectHits(findOverlaps(required_range, curated_chrs_vertex_ranges))
+      subjectHits(findOverlaps(required_range, curated_PCHiC_vertex_ranges))
     required_vertex <-
-      curated_chrs_vertex_ranges[overlaps_index]$fragment
+      curated_PCHiC_vertex_ranges[overlaps_index]$fragment
     required_vertex_with_neighbours <-
       names(unlist(lapply(required_vertex, function(rv) {
         neighbors(net, rv)
@@ -155,7 +153,7 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
     required_vertex_with_neighbours <-
       unique(c(required_vertex_with_neighbours, required_vertex))
     if (length(required_vertex_with_neighbours) == 0) {
-      required_subnet <- nearest_subnetwork(required_range, net, curated_chrs_vertex_ranges)
+      required_subnet <- nearest_subnetwork(required_range, net, curated_PCHiC_vertex_ranges)
     } else {
       required_subnet <-
         induced_subgraph(net, vids = required_vertex_with_neighbours)
@@ -166,12 +164,12 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_chrs_ve
   return(required_subnet)
 }
 ## Generate required subnetwork
-search_subnetwork <- function(search, expand, nearest, net, curated_chrs_vertex, ensembl2name) {
+search_subnetwork <- function(search, expand, nearest, net, curated_PCHiC_vertex, ensembl2name) {
   if (!is.null(search)) {
     if (str_detect(search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
       # We are working with a range
       required_subnet <-
-        search_vertex_by_range(search, expand, nearest, net, curated_chrs_vertex)
+        search_vertex_by_range(search, expand, nearest, net, curated_PCHiC_vertex)
     } else {
       required_subnet <- search_vertex_by_name(search, net, ensembl2name)
     }
