@@ -1,6 +1,7 @@
 version: '3'
 services:
   backend:
+    build: .
     image: garden-net_backend
     volumes:
       - .:/garden-net_backend
@@ -15,6 +16,7 @@ services:
       - backend
     restart: always
   celery:
+    build: .
     image: garden-net_backend
     depends_on:
       - backend

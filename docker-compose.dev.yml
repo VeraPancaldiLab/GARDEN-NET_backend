@@ -1,6 +1,7 @@
 version: '3'
 services:
   backend:
+    build: .
     image: garden-net_backend
     ports:
       - 5000:5000
@@ -17,6 +18,7 @@ services:
       - backend
     restart: always
   celery:
+    build: .
     image: garden-net_backend
     depends_on:
       - backend
