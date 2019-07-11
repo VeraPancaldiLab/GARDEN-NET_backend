@@ -276,7 +276,7 @@ generate_vertex <- function(PCHiC) {
 }
 
 merge_features <- function(curated_PCHiC_vertex, features) {
-  if (str_detect(features$fragment[1], "(([12]?[0-9])|([XYxy]))_\\d+-\\d+$")) {
+  if (str_detect(features$fragment[1], "(([12]?[0-9])|([XYxy]))_\\d+_\\d+$")) {
     curated_PCHiC_vertex <- left_join(curated_PCHiC_vertex, features, by = "fragment")
   } else if (str_detect(features$fragment[1], "(([12]?[0-9])|([XYxy]))_\\d+$")) {
     curated_PCHiC_vertex$fragment_tmp <- str_c(curated_PCHiC_vertex$chr, "_", curated_PCHiC_vertex$start)
