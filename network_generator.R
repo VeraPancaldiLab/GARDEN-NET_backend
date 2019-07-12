@@ -8,6 +8,9 @@ suppressPackageStartupMessages(library(tidyr))
 suppressPackageStartupMessages(library(igraph))
 suppressPackageStartupMessages(library(chaser))
 
+# Never use scientific format for numbers
+options(scipen = 999)
+
 source("./network_generator_lib.R")
 
 args <- commandArgs(trailingOnly = TRUE)
