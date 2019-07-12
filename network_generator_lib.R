@@ -382,8 +382,7 @@ generate_input_chaser_features <- function(curated_PCHiC_vertex, initial_feature
 }
 
 generate_features_metadata <- function(chaser_net, randomize = 0, preserve.nodes = NULL) {
-  features <- sort(colnames(chaser_net$features))
-
+  features <- colnames(chaser_net$features)
   chas <- chas(chaser_net)
 
   if (randomize != 0) {
