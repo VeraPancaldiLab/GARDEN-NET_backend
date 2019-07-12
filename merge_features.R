@@ -6,6 +6,9 @@ library(dplyr)
 library(rjson)
 suppressPackageStartupMessages(library(chaser))
 
+# Never use scientific format for numbers
+options(scipen = 999)
+
 source("./network_generator_lib.R")
 
 parser <- OptionParser(description = "Merge features script")
