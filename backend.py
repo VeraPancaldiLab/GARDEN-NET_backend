@@ -131,7 +131,7 @@ def upload_features():
                     "|",
                     "head -n1",
                     "|",
-                    "sed 's/[^\t]//g'",
+                    "tr -cd '\t'",
                     "|",
                     "awk '{print length + 1}'",
                 ]
