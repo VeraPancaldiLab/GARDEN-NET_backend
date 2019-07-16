@@ -86,7 +86,7 @@ def main():
 
         all_cmds = " ".join(cmd_list) + " | " + " | ".join(other_cmd)
 
-        print(all_cmds)
+        print(all_cmds, flush=True)
         try:
             output = subprocess.check_output(all_cmds, shell=True, encoding="UTF-8")
             shelve_cache[key] = output
@@ -110,7 +110,8 @@ def upload_features():
     # http://flask.pocoo.org/docs/1.0/patterns/fileuploads/
     organism = request.args.get("organism")
     cell_type = request.args.get("cell_type")
-    print(request.files["features"])
+    feature_format_option = request.args.get("feature_format_option")
+    feature_format_function = request.args.get("feature_format_function")
     features_file_object = request.files["features"]
     features_filename = secure_filename(features_file_object.filename)
     tmp_dir = tempfile.mkdtemp()
@@ -139,38 +140,64 @@ def upload_features():
         ).strip()
     )
 
-    features_file_type = "unknown"
-    if headers_number == 2:
-        features_file_type = "features_on_nodes"
-    if headers_number == 4:
-        try:
-            last_column = float(
-                subprocess.check_output(
-                    " ".join(
-                        [
-                            cat_command,
-                            features_path,
-                            "|",
-                            "head -n1",
-                            "|",
-                            "awk '{print $NF}'",
-                        ]
-                    ),
-                    shell=True,
-                ).strip()
-            )
-            features_file_type = "bed3"
-        except:
-            features_file_type = "chromhmm"
-
-    elif headers_number == 6:
-        features_file_type = "bed6"
-    elif headers_number == 9 or headers_number == 10:
-        features_file_type = "macs2"
+    # features_file_type = "unknown"
+    # if headers_number == 2:
+    #     features_file_type = "features_on_nodes"
+    # if headers_number == 4:
+    #     try:
+    #         last_column = float(
+    #             subprocess.check_output(
+    #                 " ".join(
+    #                     [
+    #                         cat_command,
+    #                         features_path,
+    #                         "|",
+    #                         "head -n1",
+    #                         "|",
+    #                         "awk '{print $NF}'",
+    #                     ]
+    #                 ),
+    #                 shell=True,
+    #             ).strip()
+    #         )
+    #         features_file_type = "bed3"
+    #     except:
+    #         features_file_type = "chromhmm"
+    #
+    # elif headers_number == 6:
+    #     features_file_type = "bed6"
+    # elif headers_number == 9 or headers_number == 10:
+    #     features_file_type = "macs2"
 
     # print("Header: Number of columns = " + str(headers_number))
+    #  R --vanilla --quiet --slave -e "is.function(
+    features_file_type = "unknown"
+
+    print("headers_number", flush=True)
+    print(headers_number, flush=True)
+
+    if feature_format_option == "match_nodes":
+        features_file_type = "bed6"
+    elif feature_format_option == "proportion_on_nodes":
+        if headers_number == 4:
+            features_file_type = "bed3"
+        else:
+            features_file_type = "macs2"
+        pass
+    elif feature_format_option == "chromHMM":
+        features_file_type = "chromhmm"
+    elif feature_format_option == "features_table":
+        feature_format_option = "features_table"
+
     task = processing_features.apply_async(
-        args=(tmp_dir, organism, cell_type, features_path, features_file_type)
+        args=(
+            tmp_dir,
+            organism,
+            cell_type,
+            features_path,
+            features_file_type,
+            feature_format_function,
+        )
     )
     return (
         jsonify({}),
@@ -184,7 +211,13 @@ def upload_features():
 
 @celery.task(bind=True)
 def processing_features(
-    self, tmp_dir, organism, cell_type, features_file, features_file_type
+    self,
+    tmp_dir,
+    organism,
+    cell_type,
+    features_file,
+    features_file_type,
+    feature_format_function,
 ):
 
     if features_file_type == "unknown":
@@ -216,6 +249,8 @@ def processing_features(
                 features_file,
                 "--features_file_type",
                 features_file_type,
+                "--feature_format_function",
+                feature_format_function,
             ]
         ),
         shell=True,
