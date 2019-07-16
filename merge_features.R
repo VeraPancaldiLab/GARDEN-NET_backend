@@ -17,6 +17,7 @@ parser <- add_option(parser, "--organism", help = "Organism")
 parser <- add_option(parser, "--cell_type", help = "Cell type")
 parser <- add_option(parser, "--features_file", help = "Features file")
 parser <- add_option(parser, "--features_file_type", help = "Features file type")
+parser <- add_option(parser, "--feature_format_function", default = "", help = "Features format function")
 args <- commandArgs(trailingOnly = TRUE)
 args <- parse_args(parser, args, convert_hyphens_to_underscores = T)
 # args <- parse_args(parser, args = c("--organism", "Mus_musculus", "--cell_type", "Embryonic_stem_cells", "--features_file", "/mnt/SERVER-CRCT-STORAGE/CRCT21/Private/Common/forGARDEN-NET/mean_efficiency_wt_mm9_good_1.bed", "--features_file_type", "bed6"))
@@ -44,9 +45,12 @@ if (!is.null(args$fifo_file)) {
 chaser_net$features <- NULL
 feature_name <- str_split(basename(args$features_file), fixed("."))[[1]][1]
 
+if (args$feature_format_function == "") {
+  args$feature_format_function <- NULL
+}
 return_status <- 0
 tryCatch({
-  chaser_net <- chaser::load_features(chaser_net, args$features_file, featname = feature_name, type = args$features_file_type, missingv = 0)
+  chaser_net <- chaser::load_features(chaser_net, args$features_file, featname = feature_name, type = args$features_file_type, missingv = 0, auxfun = args$features_format_function)
 
   counter <- counter + 1
 
