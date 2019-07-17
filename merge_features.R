@@ -46,7 +46,7 @@ chaser_net$features <- NULL
 # Never use dash - in feature names (forbidden in cytoscape attributes)
 feature_name <- str_replace_all(str_split(basename(args$features_file), fixed("."))[[1]][1], fixed("-"), fixed("_"))
 
-if (args$feature_format_function == "") {
+if (args$feature_format_function == "" || args$feature_format_function == "None") {
   args$feature_format_function <- NULL
 }
 return_status <- 0
