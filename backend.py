@@ -300,9 +300,6 @@ def processing_features(
             features = json.loads(f.read())
         with open(os.path.join(tmp_dir, "features_metadata.json"), "r") as f:
             features_metadata = json.loads(f.read())
-
-        os.remove(fifo_file)
-        shutil.rmtree(tmp_dir)
     except:
         self.update_state(
             state="FAILURE",
@@ -317,6 +314,9 @@ def processing_features(
         )
         # ignore the task so no other state is recorded
         raise Ignore()
+    finally:
+        os.remove(fifo_file)
+        shutil.rmtree(tmp_dir)
 
     return {
         "percentage": 100,
