@@ -50,7 +50,7 @@ if (args$feature_format_function == "") {
 }
 return_status <- 0
 tryCatch({
-  chaser_net <- chaser::load_features(chaser_net, args$features_file, featname = feature_name, type = args$features_file_type, missingv = 0, auxfun = args$features_format_function)
+  chaser_net <- chaser::load_features(chaser_net, args$features_file, featname = feature_name, type = args$features_file_type, missingv = 0, auxfun = args$feature_format_function)
 
   counter <- counter + 1
 
