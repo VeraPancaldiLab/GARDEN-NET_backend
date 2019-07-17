@@ -43,7 +43,8 @@ if (!is.null(args$fifo_file)) {
 
 # Remove old features first
 chaser_net$features <- NULL
-feature_name <- str_split(basename(args$features_file), fixed("."))[[1]][1]
+# Never use dash - in feature names (forbidden in cytoscape attributes)
+feature_name <- str_replace_all(str_split(basename(args$features_file), fixed("."))[[1]][1], fixed("-"), fixed("_"))
 
 if (args$feature_format_function == "") {
   args$feature_format_function <- NULL
