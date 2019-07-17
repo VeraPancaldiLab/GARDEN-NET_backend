@@ -61,7 +61,7 @@ tryCatch({
     close(con)
   }
 
-  baits <- unique(chaser::export(chaser_net, "edges")$node_from)
+  baits <- unique(chaser::export(chaser_net, "originaldf")$node_from)
   net_features_metadata <- generate_features_metadata(chaser_net, randomize = 10, preserve.nodes = baits)
   # PP network only
   counter <- counter + 1
@@ -80,7 +80,7 @@ tryCatch({
     con <- pipe(paste("echo 'Generating features metadata for PO only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
     close(con)
   }
-  all_oes <- unique(chaser::export(chaser_net, "edges")$node_to)
+  all_oes <- unique(chaser::export(chaser_net, "originaldf")$node_to)
   oes <- all_oes[!(all_oes %in% baits)]
   chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
   po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
