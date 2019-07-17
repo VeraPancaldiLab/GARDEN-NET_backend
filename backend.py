@@ -20,7 +20,9 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = "/tmp/flask_uploads"
-ALLOWED_EXTENSIONS = set(["txt", "txt.gz", "bed", "bed.gz", "bedgraph", "bedgraph.gz"])
+# ALLOWED_EXTENSIONS = set(
+#     ["txt", "txt.gz", "bed", "bed.gz", ".tsv", ".tsv.gz", "bedgraph", "bedgraph.gz"]
+# )
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
