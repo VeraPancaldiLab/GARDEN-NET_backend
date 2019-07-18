@@ -96,14 +96,14 @@ test_that("Testing features_on_nodes format from chaser package", {
   expect_equal(net_features_metadata$ChAs["EZH2"][[1]], 0.3345724571)
   expect_equal(net_features_metadata$`Mean degree`["EZH2"][[1]], 3.89)
   # PP network only
-  baits <- unique(chaser::export(chaser_net, "originaldf")$node_from)
+  baits <- chaser::export(chaser_net, "baits")
   chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
   pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
   expect_equal(pp_net_features_metadata$Abundance["EZH2"][[1]], 0.05)
   expect_equal(pp_net_features_metadata$ChAs["EZH2"][[1]], 0.3732509223)
   expect_equal(pp_net_features_metadata$`Mean degree`["EZH2"][[1]], 2.94)
   # PO network only
-  all_oes <- unique(chaser::export(chaser_net, "originaldf")$node_to)
+  all_oes <- chaser::export(chaser_net, "nodes")$name
   oes <- all_oes[!(all_oes %in% baits)]
   chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
   po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
@@ -124,14 +124,14 @@ test_that("Testing macs2 format from chaser package", {
   expect_equal(round(net_features_metadata$ChAs["H3K27me3"][[1]], 3), 0.149)
   expect_equal(round(net_features_metadata$`Mean degree`["H3K27me3"][[1]], 3), 4.05)
   # PP network only
-  baits <- unique(chaser::export(chaser_net, "originaldf")$node_from)
+  baits <- chaser::export(chaser_net, "baits")
   chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
   pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
   expect_equal(round(pp_net_features_metadata$Abundance["H3K27me3"][[1]], 3), 0.07)
   expect_equal(round(pp_net_features_metadata$ChAs["H3K27me3"][[1]], 3), 0.127)
   expect_equal(round(pp_net_features_metadata$`Mean degree`["H3K27me3"][[1]], 3), 3.2)
   # PO network only
-  all_oes <- unique(chaser::export(chaser_net, "originaldf")$node_to)
+  all_oes <- chaser::export(chaser_net, "nodes")$name
   oes <- all_oes[!(all_oes %in% baits)]
   chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
   po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
@@ -152,14 +152,14 @@ test_that("Testing bed3 format from chaser package", {
   expect_equal(round(net_features_metadata$ChAs["mono27ac"][[1]], 3), -0.094)
   expect_equal(round(net_features_metadata$`Mean degree`["mono27ac"][[1]], 3), 3.47)
   # PP network only
-  baits <- unique(chaser::export(chaser_net, "originaldf")$node_from)
+  baits <- chaser::export(chaser_net, "baits")
   chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
   pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
   expect_equal(round(pp_net_features_metadata$Abundance["mono27ac"][[1]], 3), 1)
   expect_equal(round(pp_net_features_metadata$ChAs["mono27ac"][[1]], 3), 0.003)
   expect_equal(round(pp_net_features_metadata$`Mean degree`["mono27ac"][[1]], 3), 3.44)
   # PO network only
-  all_oes <- unique(chaser::export(chaser_net, "originaldf")$node_to)
+  all_oes <- chaser::export(chaser_net, "nodes")$name
   oes <- all_oes[!(all_oes %in% baits)]
   chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
   po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
@@ -180,14 +180,14 @@ test_that("Testing chromhmm format from chaser package", {
   expect_equal(round(net_features_metadata$ChAs["E1"][[1]], 3), 0.040)
   expect_equal(round(net_features_metadata$`Mean degree`["E1"][[1]], 3), 4.19)
   # PP network only
-  baits <- unique(chaser::export(chaser_net, "originaldf")$node_from)
+  baits <- chaser::export(chaser_net, "baits")
   chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
   pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
   expect_equal(round(pp_net_features_metadata$Abundance["E1"][[1]], 3), 0.16)
   expect_equal(round(pp_net_features_metadata$ChAs["E1"][[1]], 3), 0.062)
   expect_equal(round(pp_net_features_metadata$`Mean degree`["E1"][[1]], 3), 3.68)
   # PO network only
-  all_oes <- unique(chaser::export(chaser_net, "originaldf")$node_to)
+  all_oes <- chaser::export(chaser_net, "nodes")$name
   oes <- all_oes[!(all_oes %in% baits)]
   chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
   po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
