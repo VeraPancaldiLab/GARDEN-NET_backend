@@ -87,7 +87,13 @@ search_vertex_by_name <- function(vertex, net, ensembl2name) {
       }
     }
 
-    searched_vertex_index <- str_which(str_to_lower(V(net)$gene_names), regex(str_c("\\b", vertex, "\\b")))
+    all_gene_names_together <- NULL
+    if ("alias" %in% vertex_attr_names(net)) {
+      all_gene_names_together <- str_c(V(net)$gene_names, V(net)$alias, sep = " ")
+    } else {
+      all_gene_names_together <- V(net)$gene_names
+    }
+    searched_vertex_index <- str_which(str_to_lower(all_gene_names_together), regex(str_c("\\b", vertex, "\\b")))
 
     if (length(searched_vertex_index) == 0) {
       return(NULL)
