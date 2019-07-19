@@ -183,7 +183,7 @@ search_subnetwork <- function(search, expand, nearest, net, curated_PCHiC_vertex
       required_subnet <-
         search_vertex_by_range(search, expand, nearest, net, curated_PCHiC_vertex)
     } else if (str_detect(search, "(\\w+,\\w+)+")) {
-      gene_list_to_search <- str_split(search, fixed(","))[[1]]
+      gene_list_to_search <- str_split(search, "[, \\t]")[[1]]
       required_subnet <- search_vertex_by_name(gene_list_to_search, net, ensembl2name)
     } else {
       required_subnet <- search_vertex_by_name(search, net, ensembl2name)
