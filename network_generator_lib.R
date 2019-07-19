@@ -80,10 +80,15 @@ search_vertex_by_name <- function(vertex, net, ensembl2name) {
   } else {
     # Always search in lowercase
     vertex <- str_to_lower(vertex)
-    if (str_detect(vertex, "^ens(mus)?g\\d+")) {
-      vertex <- str_to_lower(ensembl2name[str_to_upper(vertex)])
-      if (is.na(vertex)) {
-        return(NULL)
+    curated_vertex_list <- c()
+    for (v in vertex) {
+      if (str_detect(v, "^ens(mus)?g\\d+")) {
+        curated_vertex_list <- c(curated_vertex_list, str_to_lower(ensembl2name[str_to_upper(v)]))
+        if (is.na(v)) {
+          return(NULL)
+        }
+      } else {
+        curated_vertex_list <- c(curated_vertex_list, v)
       }
     }
 
@@ -93,7 +98,9 @@ search_vertex_by_name <- function(vertex, net, ensembl2name) {
     } else {
       all_gene_names_together <- V(net)$gene_names
     }
-    searched_vertex_index <- str_which(str_to_lower(all_gene_names_together), regex(str_c("\\b", vertex, "\\b")))
+    searched_vertex_index <- unique(unlist(sapply(curated_vertex_list, function(vertex) {
+      str_which(str_to_lower(all_gene_names_together), regex(str_c("\\b", vertex, "\\b")))
+    })))
 
     if (length(searched_vertex_index) == 0) {
       return(NULL)
@@ -175,6 +182,9 @@ search_subnetwork <- function(search, expand, nearest, net, curated_PCHiC_vertex
       # We are working with a range
       required_subnet <-
         search_vertex_by_range(search, expand, nearest, net, curated_PCHiC_vertex)
+    } else if (str_detect(search, "(\\w+,\\w+)+")) {
+      gene_list_to_search <- str_split(search, fixed(","))[[1]]
+      required_subnet <- search_vertex_by_name(gene_list_to_search, net, ensembl2name)
     } else {
       required_subnet <- search_vertex_by_name(search, net, ensembl2name)
     }
