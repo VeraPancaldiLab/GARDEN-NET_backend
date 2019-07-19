@@ -70,8 +70,8 @@ def main():
 
         if search:
             # sanitized_search = SANITIZE_PATTERN.sub('', search.split()[0])
-            sanitized_search = search.split()[0]
-            cmd_list.append("--search=" + "'" + sanitized_search + "'")
+            # sanitized_search = search.split()[0]
+            cmd_list.append("--search=" + "'" + search + "'")
 
         if organism:
             cmd_list.append("--organism=" + organism)
