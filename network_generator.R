@@ -1,5 +1,11 @@
 #!/usr/bin/Rscript
+
+# Load all libraries at the beginning
+
 library(optparse)
+
+# Suppress verbose information of many libraries
+
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(readr))
@@ -14,6 +20,9 @@ options(scipen = 999)
 source("./network_generator_lib.R")
 
 args <- commandArgs(trailingOnly = TRUE)
+
+# Fast access to many input parameter combinations
+
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "1_173143867"))
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "6:52155590-52158317"))
 # args <- parser_arguments(args = c("--PCHiC", "~/R_DATA/ChAs/PCHiC_interaction_map.txt", "--features", "~/R_DATA/ChAs/Features_mESC.txt","--search", "asdfasdfa"))
@@ -23,24 +32,30 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-aCD4.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Neu.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Neu.tsv", "--features", "./input_datasets/Homo_sapiens-Neu.features", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-FoeT.tsv", "--features", "./input_datasets_homo_features/Homo_sapiens-FoeT.features", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
+#  args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
 # args <- parser_arguments(args = c("--PCHiC", "../GARDEN-NET_utils_related/PCHiC_peak_matrix_cutoff5.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv", "--search", "hoxa6"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv", "--chromosome", "PP"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv"))
 
+# Load parameters from command line
 args <- parser_arguments(args)
 
+# Load PCHiC data
 PCHiC <- load_PCHiC(args$PCHiC)
 
+# Filter by threshold contact, by default 5
 PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
 
+# Add bait and other-end types
 PCHiC <- add_PCHiC_types(PCHiC)
 
 PCHiC_ALL <- PCHiC
 
+# Select by chromosome or promoter-promoter
 if (!is.null(args$chromosome)) {
   if (args$chromosome != "PP") {
     PCHiC <- filter_by_chromosome(PCHiC, args$chromosome)
@@ -55,13 +70,16 @@ if (nrow(PCHiC) == 0) {
   quit(status = 0)
 }
 
+# Generate vertex from PCHiC data
 curated_PCHiC_vertex <- generate_vertex(PCHiC)
 
+# Add bait names if PCHiC data can be improved
 if (!is.null(args$bait_names)) {
   suppressPackageStartupMessages(library(GenomicRanges))
   curated_PCHiC_vertex <- generate_real_bait_names(curated_PCHiC_vertex, args$bait_names)
 }
 
+# Add gene alias from biomart
 if (!is.null(args$alias)) {
   suppressPackageStartupMessages(library(GenomicRanges))
   organism <- str_split(basename(args$PCHiC), fixed("-"))[[1]][1]
@@ -73,6 +91,7 @@ if (!is.null(args$alias)) {
   }
 }
 
+# Add if other-ends are inside intronic regions
 if (!is.null(args$intronic_regions)) {
   suppressPackageStartupMessages(library(GenomicRanges))
   curated_PCHiC_vertex <- generate_intronics_regions(curated_PCHiC_vertex, args$intronic_regions)
@@ -90,6 +109,7 @@ if (!is.null(args$features)) {
   initial_features_position <- which(colnames(curated_PCHiC_vertex) == colnames(initial_features)[2])
 }
 
+# Generate edges for the igraph network
 curated_PCHiC_edges <- generate_edges(PCHiC)
 
 ## ------------------------------------------------------------------------
@@ -145,8 +165,9 @@ if (is.null(required_subnet)) {
 
     features <- NULL
     # Generate again all the network but without removing by chromosome
+    # Only generate network metadata for the first chromosome because is the same for all
     if (!is.null(args$chromosome) && args$chromosome == "1") {
-      # We need to take all the network for statistics insteand of chromosome network
+      # We need to take all the network for statistics instead of chromosome network
       if (!is.null(args$chromosome)) {
         curated_PCHiC_vertex <- generate_vertex(PCHiC_ALL)
 
@@ -155,6 +176,7 @@ if (is.null(required_subnet)) {
           curated_PCHiC_vertex <- generate_real_bait_names(curated_PCHiC_vertex, args$bait_names)
         }
 
+        # Add alias to the entire network
         ensembl2name <- NULL
         if (!is.null(args$alias)) {
           suppressPackageStartupMessages(library(GenomicRanges))
@@ -169,11 +191,13 @@ if (is.null(required_subnet)) {
           names(ensembl2name) <- alias$`Ensembl gene ID`
         }
 
+        # Add intronic regions to the entire network
         if (!is.null(args$intronic_regions)) {
           suppressPackageStartupMessages(library(GenomicRanges))
           curated_PCHiC_vertex <- generate_intronics_regions(curated_PCHiC_vertex, args$intronic_regions)
         }
 
+        # Add features to the entire network
         if (!is.null(args$features)) {
           curated_PCHiC_vertex <- merge_features(curated_PCHiC_vertex, initial_features)
           # Generate features
@@ -183,11 +207,9 @@ if (is.null(required_subnet)) {
           features <- list()
         }
         curated_PCHiC_edges <- generate_edges(PCHiC_ALL)
-        net <-
-          graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
+        net <- graph_from_data_frame(curated_PCHiC_edges, directed = F, curated_PCHiC_vertex)
         V(net)$total_degree <- degree(net)
       }
-      # Only generate network metadata for the first chromosome because is the same for all
       # Generate chromosomes
       chromosomes <- unique(curated_PCHiC_vertex$chr)
       # Remove MT mouse chromosome
@@ -195,14 +217,15 @@ if (is.null(required_subnet)) {
       chromosomes <- c(chromosomes, "PP")
       chromosomes <- str_sort(chromosomes[chromosomes != "MT"], numeric = T)
 
-      # Generate suggestions
+      # Generate suggestions for the web
       suggestions <- generate_suggestions(net)
 
-      # Generate gchas
+      # Generate chaser network from PCHiC data
       chaser_input_PCHiC <- generate_input_chaser_PCHiC(PCHiC_ALL)
       chaser_net <- make_chromnet(chaser_input_PCHiC)
 
       if (!is.null(args$features)) {
+        # Map directly to the chaser nodes the features from curated vertex
         chaser_input_features <- generate_input_chaser_features(curated_PCHiC_vertex, initial_features_position)
         chaser_net <- chaser::load_features(chaser_net, chaser_input_features, type = "features_on_nodes", missingv = 0)
 
