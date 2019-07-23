@@ -8,6 +8,7 @@ const cytoscape = require('cytoscape');
 program
   .usage('json_cytoscape_file\n  or   layout_enricher < json_cytoscape_file\n  or   | layout_enricher')
 
+// If the input is a file
 if(process.stdin.isTTY) {
   program.parse(process.argv);
   if (program.args.length !== 1) {
@@ -15,38 +16,40 @@ if(process.stdin.isTTY) {
   } else {
     let json_cytoscape_file = program.args[0]
     fs.readFile(json_cytoscape_file, (err, file_content) => {
-    if (err) throw err;
-    build_network(file_content)
-  });
+      if (err) throw err;
+      build_network(file_content)
+    });
   }
 }
+  // If the input is a sdtin
 else {
-var inputChunks = [];
+  var inputChunks = [];
 
-process.stdin.setEncoding('utf8');
+  process.stdin.setEncoding('utf8');
 
-process.stdin.on('readable', () => {
-  const chunk = process.stdin.read();
-  if (chunk !== null) {
-    inputChunks.push(chunk);
-  }
-});
+  // Read stdin using chunks
+  process.stdin.on('readable', () => {
+    const chunk = process.stdin.read();
+    if (chunk !== null) {
+      inputChunks.push(chunk);
+    }
+  });
 
-process.stdin.on('end', function () {
-
-  var input_string = inputChunks.join('');
-  if (input_string == '{}') {
-    process.stdout.write('{}');
-  } else {
-    build_network(input_string)
-  }
-
-});
-
+  // When there is not more stdin to read join all the chunks in a string and build the igraph network
+  process.stdin.on('end', function () {
+    var input_string = inputChunks.join('');
+    if (input_string == '{}') {
+      process.stdout.write('{}');
+    } else {
+      build_network(input_string)
+    }
+  });
 }
 
+// function to build the igraph network with the cose layout
 function build_network(input_string) {
 
+  // Convert the input string to a json hash to load the igraph elements
   var parsedJSON = JSON.parse(input_string);
 
   var network = cytoscape({
@@ -56,6 +59,7 @@ function build_network(input_string) {
     }
   });
 
+  // Use cose layout and customize the parameters a bit
   var layout = network.layout({
     name: 'cose',
     animate: false,
@@ -76,10 +80,13 @@ function build_network(input_string) {
     minTemp: 1.0
   });
 
+  // Add write to sdtout handler to the layoutstop event
   layout.on('layoutstop', write);
 
+  // The layout is calculated asynchronously
   layout.run();
 
+  // function to write to the stdout using stringify
   function write(){
     outputJSON = JSON.stringify(network.elements().jsons(), null, '  ');
     process.stdout.write(outputJSON);
