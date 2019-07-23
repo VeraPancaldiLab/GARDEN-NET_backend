@@ -88,7 +88,8 @@ tryCatch({
   features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
 
   features <- as_tibble(chaser_net$features, rownames = "fragment")
-  if (args$features_file_type == "macs2" || args$features_file_type == "bed6") {
+  # Use feature name when the chaser format provides it
+  if (args$features_file_type == "macs2" || args$features_file_type == "bed3" || args$features_file_type == "bed6") {
     colnames(features)[2] <- feature_name
   }
 
