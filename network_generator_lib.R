@@ -1,3 +1,7 @@
+#' @title parser_arguments
+#' @description Convert input parameters to a named list
+#' @param args input parameters
+#' @return named list with the input parameters
 parser_arguments <- function(args) {
   parser <- OptionParser(description = "Separated values file to cytoscape json mapper")
   parser <- add_option(parser, "--PCHiC", help = "Separated values file PCHiC as input file")
@@ -61,8 +65,14 @@ parser_arguments <- function(args) {
   )
   return(parse_args(parser, args, convert_hyphens_to_underscores = T))
 }
-## ------------------------------------------------------------------------
-search_vertex_by_name <- function(vertex, net, ensembl2name) {
+
+#' @title search_vertex_by_names
+#' @description search vertex by names
+#' @param vertex one or many vertex
+#' @param net igraph network
+#' @param ensembl2name named list with ensembl id to name translation
+#' @return specific neighborhood for that set of vertex
+search_vertex_by_names <- function(vertex, net, ensembl2name) {
   # Detect if we are searching by position (we are working with mouse chromosomes by now) or by name
   # Always return NULL if it doesn't exist the vertex in the graph
   if (str_detect(vertex, "^(([12]?[0-9])|([XYxy]))_\\d+_\\d+$")) {
@@ -119,6 +129,12 @@ search_vertex_by_name <- function(vertex, net, ensembl2name) {
   }
 }
 
+#' @title nearest_subnetwork
+#' @description Find the nearest subnetwork closer to the required range
+#' @param required_range Required range reference
+#' @param net igraph network
+#' @param curated_PCHiC_vertex_ranges curated_PCHiC_vertex with ranges
+#' @return the neighborhood closer to the required range
 nearest_subnetwork <- function(required_range, net, curated_PCHiC_vertex_ranges) {
   nearest_range_index <- nearest(required_range, curated_PCHiC_vertex_ranges)
   searched_vertex_index <- curated_PCHiC_vertex_ranges[nearest_range_index]$fragment
@@ -136,6 +152,14 @@ nearest_subnetwork <- function(required_range, net, curated_PCHiC_vertex_ranges)
   return(required_subnet)
 }
 
+#' @title search_vertex_by_range
+#' @description Search neighborhood by range
+#' @param search the range to be used
+#' @param expand expand the range
+#' @param nearest search the nearest neighborhood always used if there is not neighborhood
+#' @param net igraph network
+#' @param curated_PCHiC_vertex  curated vertex from PCHiC
+#' @return the found neighborhood
 search_vertex_by_range <- function(search, expand, nearest, net, curated_PCHiC_vertex) {
   curated_PCHiC_vertex_ranges <-
     makeGRangesFromDataFrame(
@@ -175,7 +199,16 @@ search_vertex_by_range <- function(search, expand, nearest, net, curated_PCHiC_v
   }
   return(required_subnet)
 }
-## Generate required subnetwork
+
+#' @title search_subnetwork
+#' @description Search the subnetwork for the required string
+#' @param search search string
+#' @param expand expand the range search
+#' @param nearest find the nearest range
+#' @param net igraph network
+#' @param curated_PCHiC_vertex curated vertex from PCHiC
+#' @param ensembl2name conversion between ensembl id to gene name
+#' @return the found neighborhood
 search_subnetwork <- function(search, expand, nearest, net, curated_PCHiC_vertex, ensembl2name) {
   if (!is.null(search)) {
     if (str_detect(search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
@@ -184,9 +217,9 @@ search_subnetwork <- function(search, expand, nearest, net, curated_PCHiC_vertex
         search_vertex_by_range(search, expand, nearest, net, curated_PCHiC_vertex)
     } else if (str_detect(search, "(\\w+,\\w+)+")) {
       gene_list_to_search <- str_split(search, "[, \\t]")[[1]]
-      required_subnet <- search_vertex_by_name(gene_list_to_search, net, ensembl2name)
+      required_subnet <- search_vertex_by_names(gene_list_to_search, net, ensembl2name)
     } else {
-      required_subnet <- search_vertex_by_name(search, net, ensembl2name)
+      required_subnet <- search_vertex_by_names(search, net, ensembl2name)
     }
     if (!is.null(required_subnet)) {
       # Always recalculate degrees for each neighborhood
@@ -198,7 +231,15 @@ search_subnetwork <- function(search, expand, nearest, net, curated_PCHiC_vertex
   return(required_subnet)
 }
 
-## Generate Cytoscape JSON
+#' @title generate_cytoscape_json
+#' @description Convert the igraph network to Cytoscape json format
+#' @param required_subnet the network to be converted
+#' @return the json string
+#' @seealso
+#'  \code{\link[igraph]{as_data_frame}}
+#'  \code{\link[dplyr]{select}}
+#' @importFrom igraph as_data_frame
+#' @importFrom dplyr rename
 generate_cytoscape_json <- function(required_subnet) {
   if (is.null(required_subnet)) {
     return("{}")
@@ -234,7 +275,10 @@ generate_cytoscape_json <- function(required_subnet) {
   return(toJSON(JSON_df, indent = 2))
 }
 
-# Load PCHiC
+#' @title load_PCHiC
+#' @description Load PCHiC data
+#' @param PCHiC_file PCHiC file
+#' @return PCHiC as tibble
 load_PCHiC <- function(PCHiC_file) {
   suppressMessages(read_tsv(
     file = PCHiC_file,
@@ -242,18 +286,28 @@ load_PCHiC <- function(PCHiC_file) {
   ))
 }
 
-# Filter by threshold (column 12)
+#' @title filter_by_threshold
+#' @description Filter PCHiC data using the threshold
+#' @param PCHiC PCHiC data
+#' @param threshold Requested threshold (always column 12)
+#' @return Filtered PCHiC
 filter_by_threshold <- function(PCHiC, threshold) {
   PCHiC[PCHiC[12] > threshold, ]
 }
 
-# Filter by chromosome
+#' @title filter_by_chromosome
+#' @description filter PCHiC data by chromosome
+#' @param PCHiC PCHiC data
+#' @param chromosome Chromosome used as filter
+#' @return PCHiC filtered which contains interchromosomal interactions
 filter_by_chromosome <- function(PCHiC, chromosome) {
-  PCHiC[which(PCHiC$baitChr == chromosome
-  | PCHiC$oeChr == chromosome), ]
+  PCHiC[which(PCHiC$baitChr == chromosome | PCHiC$oeChr == chromosome), ]
 }
 
-# Generate vertex from a PCHiC file
+#' @title generate_vertex
+#' @description Generate vertex data from PCHiC data
+#' @param PCHiC data
+#' @return generated vertex
 generate_vertex <- function(PCHiC) {
   ## ------------------------------------------------------------------------
   # Join chr number with the start position
@@ -291,6 +345,11 @@ generate_vertex <- function(PCHiC) {
   distinct(curated_PCHiC_vertex)
 }
 
+#' @title merge_features
+#' @description Merge features to curated vertex data
+#' @param curated_PCHiC_vertex curated vertex data
+#' @param features data
+#' @return curated vertex with features
 merge_features <- function(curated_PCHiC_vertex, features) {
   if (str_detect(features$fragment[1], "(([12]?[0-9])|([XYxy]))_\\d+_\\d+$")) {
     curated_PCHiC_vertex <- left_join(curated_PCHiC_vertex, features, by = "fragment")
@@ -304,8 +363,10 @@ merge_features <- function(curated_PCHiC_vertex, features) {
   curated_PCHiC_vertex
 }
 
-
-# Generate a dataframe with the extremes of the edges
+#' @title generate_edges
+#' @description Generate edges from PCHiC data
+#' @param PCHiC PCHiC data
+#' @return Edges extracted from PCHiC data
 generate_edges <- function(PCHiC) {
   baits <- str_c(PCHiC$baitChr, PCHiC$baitStart, PCHiC$baitEnd, sep = "_")
   oes <- str_c(PCHiC$oeChr, PCHiC$oeStart, PCHiC$oeEnd, sep = "_")
@@ -313,7 +374,10 @@ generate_edges <- function(PCHiC) {
   curated_PCHiC_edges
 }
 
-# Generate gene name list
+#' @title generate_suggestions
+#' @description Generate genes names list from all network to be used as suggestions for garden-net frontend
+#' @param net igraph network
+#' @return Genes names suggestions list
 generate_suggestions <- function(net) {
   suggestions <- sort(unique(unlist(sapply(V(net)$gene_names, function(gene_names) {
     str_split(gene_names, fixed(" "))
@@ -324,6 +388,10 @@ generate_suggestions <- function(net) {
   suggestions
 }
 
+#' @title generate_graph_metadata
+#' @description Generate graph metadata from an igraph network
+#' @param net igraph network
+#' @return named list with many network properties and statistics
 generate_graph_metadata <- function(net) {
   nodes <- length(V(net))
   degree_average <- round(mean(degree(net)), 2)
@@ -365,6 +433,10 @@ generate_graph_metadata <- function(net) {
   graph_metadata
 }
 
+#' @title add_PCHiC_types
+#' @description Add promoter-promoter or promoter other-end interaction type to PCHiC data
+#' @param PCHiC PCHiC data
+#' @return PCHiC data with types
 add_PCHiC_types <- function(PCHiC) {
   # Add the type for bait and oes
   # Be careful because in the oe column there are many baits
@@ -375,6 +447,10 @@ add_PCHiC_types <- function(PCHiC) {
   PCHiC
 }
 
+#' @title generate_input_chaser_PCHiC
+#' @description Convert PCHiC to chaser input data
+#' @param PCHiC PCHiC data
+#' @return PCHiC
 generate_input_chaser_PCHiC <- function(PCHiC) {
   chaser_PCHiC <- PCHiC[, c(1:3, 6:8)]
   if (any(grepl("MT", chaser_PCHiC$baitChr))) {
@@ -386,6 +462,14 @@ generate_input_chaser_PCHiC <- function(PCHiC) {
   chaser_PCHiC_df
 }
 
+#' @title generate_input_chaser_features
+#' @description Extract features from curated vertex to adapt to chaser format
+#' @param curated_PCHiC_vertex curated vertex
+#' @param initial_features_position first feature position in curated vertex tibble
+#' @return features in chaser format
+#' @seealso
+#'  \code{\link[dplyr]{select}}
+#' @importFrom dplyr select
 generate_input_chaser_features <- function(curated_PCHiC_vertex, initial_features_position) {
   chaser_features <- curated_PCHiC_vertex
   chaser_features$fragment <- str_c(curated_PCHiC_vertex$chr, str_c(curated_PCHiC_vertex$start, curated_PCHiC_vertex$end, sep = "-"), sep = ":")
@@ -397,6 +481,15 @@ generate_input_chaser_features <- function(curated_PCHiC_vertex, initial_feature
   chaser_features_df
 }
 
+#' @title generate_features_metadata
+#' @description Generate ChAs, random ChAs, abundance and mean degree for each feature
+#' @param chaser_net chaser network
+#' @param randomize number of random ChAs networks to be used to calculate the random range, Default: 0
+#' @param preserve.nodes which nodes to preserve during the randomization process, Default: NULL
+#' @return metadata features information
+#' @seealso
+#'  \code{\link[chaser]{randomize}}
+#' @importFrom chaser randomize
 generate_features_metadata <- function(chaser_net, randomize = 0, preserve.nodes = NULL) {
   features <- colnames(chaser_net$features)
   chas <- chas(chaser_net)
@@ -443,6 +536,13 @@ generate_features_metadata <- function(chaser_net, randomize = 0, preserve.nodes
 }
 
 # Adapted to N graphs from only 2, see https://stackoverflow.com/a/46338136
+#' @title union_graphs_with_attributes
+#' @description Join all attributes from two igraph networks
+#' @param graph_list list of igraph to be joined
+#' @return igraph network with all attributed merged
+#' @seealso
+#'  \code{\link[igraph]{union}}
+#' @importFrom igraph union
 union_graphs_with_attributes <- function(graph_list) {
 
   # Internal function that cleans the names of a given attribute and merge them
@@ -489,6 +589,14 @@ union_graphs_with_attributes <- function(graph_list) {
   return(union_graph)
 }
 
+#' @title generate_alias_homo
+#' @description Add homo sapiens alias to the curated vertex
+#' @param curated_PCHiC_vertex curated vertex
+#' @param alias alias data
+#' @return curated vertex with homo sapiens alias
+#' @seealso
+#'  \code{\link[dplyr]{select}}
+#' @importFrom dplyr select
 generate_alias_homo <- function(curated_PCHiC_vertex, alias) {
   # First overlap others ends and annotate them
   curated_PCHiC_vertex_with_alias <- NULL
@@ -584,6 +692,16 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias) {
   curated_PCHiC_vertex_with_alias
 }
 
+#' @title generate_alias_mus
+#' @description Add mus musculus alias to the curated_vertex
+#' @param curated_PCHiC_vertex curated vertex
+#' @param alias alias data
+#' @return curated vertex alias with mus musculus alias
+#' @seealso
+#'  \code{\link[dplyr]{select}}
+#'  \code{\link[tidyr]{unnest}}
+#' @importFrom dplyr select
+#' @importFrom tidyr unnest
 generate_alias_mus <- function(curated_PCHiC_vertex, alias) {
   # First overlap others ends and annotate them
   curated_PCHiC_vertex_with_alias <- NULL
@@ -682,6 +800,11 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias) {
   curated_PCHiC_vertex_with_alias
 }
 
+#' @title generate_intronics_regions
+#' @description Add intronic_region flag to curated vertex
+#' @param curated_PCHiC_vertex curated vertex
+#' @param intronic_regions_file intronic regions file
+#' @return curated vertex with intronic regions flag
 generate_intronics_regions <- function(curated_PCHiC_vertex, intronic_regions_file) {
   intronic_regions <- read_tsv(intronic_regions_file, col_types = cols(chr = col_character()))
   intronic_regions_grange <- makeGRangesFromDataFrame(intronic_regions)
@@ -693,6 +816,11 @@ generate_intronics_regions <- function(curated_PCHiC_vertex, intronic_regions_fi
   curated_PCHiC_vertex
 }
 
+#' @title generate_real_bait_names
+#' @description Add real bait names to curated vertex
+#' @param curated_PCHiC_vertex curated vertex
+#' @param real_bait_names_file real bait names file
+#' @return curated vertex with real bait names
 generate_real_bait_names <- function(curated_PCHiC_vertex, real_bait_names_file) {
   real_bait_names <- read_tsv(real_bait_names_file, col_types = cols(Chr = col_character()))
   real_bait_names <- real_bait_names %>% mutate(gene_id = sapply(gene_id, function(g) {
