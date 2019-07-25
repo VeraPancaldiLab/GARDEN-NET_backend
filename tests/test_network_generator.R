@@ -140,7 +140,7 @@ test_that("Testing macs2 format from chaser package", {
   expect_equal(round(po_net_features_metadata$`Mean degree`["H3K27me3"][[1]], 3), 3.6)
 })
 
-test_that("Testing bed3 format from chaser package", {
+test_that("Testing bed3 format from chaser package using default aggregate function (mean)", {
   chaser_input_PCHiC_homo <- generate_input_chaser_PCHiC(homo_PCHiC)
   chaser_net <- make_chromnet(chaser_input_PCHiC_homo)
 
@@ -168,11 +168,95 @@ test_that("Testing bed3 format from chaser package", {
   expect_equal(round(po_net_features_metadata$`Mean degree`["mono27ac"][[1]], 3), 3.15)
 })
 
+test_that("Testing bed6 format from chaser package using default aggregate function (mean)", {
+  chaser_input_PCHiC_homo <- generate_input_chaser_PCHiC(homo_PCHiC)
+  chaser_net <- make_chromnet(chaser_input_PCHiC_homo)
+
+  chaser_net <- suppressWarnings(chaser::load_features(chaser_net, "../mono-meth.bed6", type = "bed6", featname = "mono_meth", missingv = 0))
+
+  net_features_metadata <- generate_features_metadata(chaser_net)
+
+  expect_equal(round(net_features_metadata$Abundance["mono_meth"][[1]], 3), 0.19)
+  expect_equal(round(net_features_metadata$ChAs["mono_meth"][[1]], 3), 0.046)
+  expect_equal(round(net_features_metadata$`Mean degree`["mono_meth"][[1]], 3), 6.27)
+  # PP network only
+  baits <- chaser::export(chaser_net, "baits")
+  chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+  pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
+  expect_equal(round(pp_net_features_metadata$Abundance["mono_meth"][[1]], 3), 0.29)
+  expect_equal(round(pp_net_features_metadata$ChAs["mono_meth"][[1]], 3), 0.181)
+  expect_equal(round(pp_net_features_metadata$`Mean degree`["mono_meth"][[1]], 3), 3.53)
+  # PO network only
+  all_oes <- chaser::export(chaser_net, "nodes")$name
+  oes <- all_oes[!(all_oes %in% baits)]
+  chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+  po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
+  expect_equal(round(po_net_features_metadata$Abundance["mono_meth"][[1]], 3), 0.19)
+  expect_equal(round(po_net_features_metadata$ChAs["mono_meth"][[1]], 3), 0.032)
+  expect_equal(round(po_net_features_metadata$`Mean degree`["mono_meth"][[1]], 3), 5.47)
+})
+
+test_that("Testing bed6 format from chaser package using min as aggregation function", {
+  chaser_input_PCHiC_homo <- generate_input_chaser_PCHiC(homo_PCHiC)
+  chaser_net <- make_chromnet(chaser_input_PCHiC_homo)
+
+  chaser_net <- suppressWarnings(chaser::load_features(chaser_net, "../mono-meth.bed6", type = "bed6", featname = "mono_meth", missingv = 0, auxfun = min))
+
+  net_features_metadata <- generate_features_metadata(chaser_net)
+
+  expect_equal(round(net_features_metadata$Abundance["mono_meth"][[1]], 3), 0.15)
+  expect_equal(round(net_features_metadata$ChAs["mono_meth"][[1]], 3), 0.021)
+  expect_equal(round(net_features_metadata$`Mean degree`["mono_meth"][[1]], 3), 6.27)
+  # PP network only
+  baits <- chaser::export(chaser_net, "baits")
+  chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+  pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
+  expect_equal(round(pp_net_features_metadata$Abundance["mono_meth"][[1]], 3), 0.14)
+  expect_equal(round(pp_net_features_metadata$ChAs["mono_meth"][[1]], 3), 0.115)
+  expect_equal(round(pp_net_features_metadata$`Mean degree`["mono_meth"][[1]], 3), 3.53)
+  # PO network only
+  all_oes <- chaser::export(chaser_net, "nodes")$name
+  oes <- all_oes[!(all_oes %in% baits)]
+  chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+  po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
+  expect_equal(round(po_net_features_metadata$Abundance["mono_meth"][[1]], 3), 0.15)
+  expect_equal(round(po_net_features_metadata$ChAs["mono_meth"][[1]], 3), 0.012)
+  expect_equal(round(po_net_features_metadata$`Mean degree`["mono_meth"][[1]], 3), 5.47)
+})
+
+test_that("Testing bed6 format from chaser package using max as aggregation function", {
+  chaser_input_PCHiC_homo <- generate_input_chaser_PCHiC(homo_PCHiC)
+  chaser_net <- make_chromnet(chaser_input_PCHiC_homo)
+
+  chaser_net <- suppressWarnings(chaser::load_features(chaser_net, "../mono-meth.bed6", type = "bed6", featname = "mono_meth", missingv = 0, auxfun = max))
+
+  net_features_metadata <- generate_features_metadata(chaser_net)
+
+  expect_equal(round(net_features_metadata$Abundance["mono_meth"][[1]], 3), 0.26)
+  expect_equal(round(net_features_metadata$ChAs["mono_meth"][[1]], 3), -0.097)
+  expect_equal(round(net_features_metadata$`Mean degree`["mono_meth"][[1]], 3), 6.27)
+  # PP network only
+  baits <- chaser::export(chaser_net, "baits")
+  chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+  pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
+  expect_equal(round(pp_net_features_metadata$Abundance["mono_meth"][[1]], 3), 0.64)
+  expect_equal(round(pp_net_features_metadata$ChAs["mono_meth"][[1]], 3), 0.162)
+  expect_equal(round(pp_net_features_metadata$`Mean degree`["mono_meth"][[1]], 3), 3.53)
+  # PO network only
+  all_oes <- chaser::export(chaser_net, "nodes")$name
+  oes <- all_oes[!(all_oes %in% baits)]
+  chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+  po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
+  expect_equal(round(po_net_features_metadata$Abundance["mono_meth"][[1]], 3), 0.25)
+  expect_equal(round(po_net_features_metadata$ChAs["mono_meth"][[1]], 3), -0.151)
+  expect_equal(round(po_net_features_metadata$`Mean degree`["mono_meth"][[1]], 3), 5.47)
+})
+
 test_that("Testing chromhmm format from chaser package", {
   chaser_input_PCHiC_homo <- generate_input_chaser_PCHiC(homo_PCHiC)
   chaser_net <- make_chromnet(chaser_input_PCHiC_homo)
 
-  chaser_net <- suppressWarnings(chaser::load_features(chaser_net, "../C002TWH2_11_segments.bed", type = "chromhmm", featname = "mono27ac", missingv = 0))
+  chaser_net <- suppressWarnings(chaser::load_features(chaser_net, "../C002TWH2_11_segments.bed", type = "chromhmm", missingv = 0))
 
   net_features_metadata <- generate_features_metadata(chaser_net)
 
