@@ -25,7 +25,8 @@ if (str_detect(args$search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
 # Search the required subnetwork
 required_subnet <- search_subnetwork(args$search, args$expand, args$nearest, net, curated_PCHiC_vertex, ensembl2name)
 
-if (is.null(required_subnet)) {
+# Cytospace doesn't process networks with only one node
+if (is.null(required_subnet) || length(V(required_subnet)) == 1) {
   cat("{}")
 } else {
   library(rjson)
