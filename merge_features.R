@@ -121,7 +121,8 @@ tryCatch({
     feature <- colnames(features)[index]
     features_for_json <- pull(features, feature)
     names(features_for_json) <- features$fragment
-    to_json[[feature]] <- features_for_json
+    # Remove forbidden feature name characters for cytoscape
+    to_json[[str_remove_all(feature, "[- ,\\(\\)\\[\\]]")]] <- features_for_json
   }
 
 
