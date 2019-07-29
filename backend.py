@@ -179,7 +179,10 @@ def upload_features():
     print(headers_number, flush=True)
 
     if feature_format_option == "match_nodes":
-        features_file_type = "bed6"
+        if headers_number == 6:
+            features_file_type = "bed6"
+        else:
+            features_file_type = "features_table"
     elif feature_format_option == "proportion_on_nodes":
         if headers_number == 4:
             features_file_type = "bed3"
@@ -189,7 +192,7 @@ def upload_features():
     elif feature_format_option == "chromHMM":
         features_file_type = "chromhmm"
     elif feature_format_option == "features_table":
-        feature_format_option = "features_table"
+        feature_format_option = "features_on_nodes"
 
     task = processing_features.apply_async(
         args=(
