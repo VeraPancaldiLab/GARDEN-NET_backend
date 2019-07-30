@@ -335,3 +335,87 @@ test_that("Testing chromhmm format from chaser package", {
   expect_equal(round(po_net_features_metadata$ChAs["E1"][[1]], 3), 0.039)
   expect_equal(round(po_net_features_metadata$`Mean degree`["E1"][[1]], 3), 3.71)
 })
+
+test_that("Testing features_table format from chaser package using default aggregate function (mean)", {
+  chaser_input_PCHiC_homo <- generate_input_chaser_PCHiC(homo_PCHiC)
+  chaser_net <- make_chromnet(chaser_input_PCHiC_homo)
+
+  chaser_net <- suppressWarnings(chaser::load_features(chaser_net, "../RTnewFile.bedgraph.gz", type = "features_table", missingv = 0))
+
+  net_features_metadata <- generate_features_metadata(chaser_net)
+
+  expect_equal(round(net_features_metadata$Abundance["RT"][[1]], 3), 1.15)
+  expect_equal(round(net_features_metadata$ChAs["RT"][[1]], 3), 0.748)
+  expect_equal(round(net_features_metadata$`Mean degree`["RT"][[1]], 3), 3.48)
+  # PP network only
+  baits <- chaser::export(chaser_net, "baits")
+  chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+  pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
+  expect_equal(round(pp_net_features_metadata$Abundance["RT"][[1]], 3), 1.74)
+  expect_equal(round(pp_net_features_metadata$ChAs["RT"][[1]], 3), 0.701)
+  expect_equal(round(pp_net_features_metadata$`Mean degree`["RT"][[1]], 3), 3.44)
+  # PO network only
+  all_oes <- chaser::export(chaser_net, "nodes")$name
+  oes <- all_oes[!(all_oes %in% baits)]
+  chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+  po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
+  expect_equal(round(po_net_features_metadata$Abundance["RT"][[1]], 3), 1.14)
+  expect_equal(round(po_net_features_metadata$ChAs["RT"][[1]], 3), 0.752)
+  expect_equal(round(po_net_features_metadata$`Mean degree`["RT"][[1]], 3), 3.16)
+})
+
+test_that("Testing features_table format from chaser package using min as aggregate function", {
+  chaser_input_PCHiC_homo <- generate_input_chaser_PCHiC(homo_PCHiC)
+  chaser_net <- make_chromnet(chaser_input_PCHiC_homo)
+
+  chaser_net <- suppressWarnings(chaser::load_features(chaser_net, "../RTnewFile.bedgraph.gz", type = "features_table", missingv = 0, auxfun = min))
+
+  net_features_metadata <- generate_features_metadata(chaser_net)
+
+  expect_equal(round(net_features_metadata$Abundance["RT"][[1]], 3), 1.14)
+  expect_equal(round(net_features_metadata$ChAs["RT"][[1]], 3), 0.747)
+  expect_equal(round(net_features_metadata$`Mean degree`["RT"][[1]], 3), 3.48)
+  # PP network only
+  baits <- chaser::export(chaser_net, "baits")
+  chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+  pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
+  expect_equal(round(pp_net_features_metadata$Abundance["RT"][[1]], 3), 1.71)
+  expect_equal(round(pp_net_features_metadata$ChAs["RT"][[1]], 3), 0.7)
+  expect_equal(round(pp_net_features_metadata$`Mean degree`["RT"][[1]], 3), 3.44)
+  # PO network only
+  all_oes <- chaser::export(chaser_net, "nodes")$name
+  oes <- all_oes[!(all_oes %in% baits)]
+  chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+  po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
+  expect_equal(round(po_net_features_metadata$Abundance["RT"][[1]], 3), 1.13)
+  expect_equal(round(po_net_features_metadata$ChAs["RT"][[1]], 3), 0.752)
+  expect_equal(round(po_net_features_metadata$`Mean degree`["RT"][[1]], 3), 3.16)
+})
+
+test_that("Testing features_table format from chaser package using max as aggregate function", {
+  chaser_input_PCHiC_homo <- generate_input_chaser_PCHiC(homo_PCHiC)
+  chaser_net <- make_chromnet(chaser_input_PCHiC_homo)
+
+  chaser_net <- suppressWarnings(chaser::load_features(chaser_net, "../RTnewFile.bedgraph.gz", type = "features_table", missingv = 0, auxfun = max))
+
+  net_features_metadata <- generate_features_metadata(chaser_net)
+
+  expect_equal(round(net_features_metadata$Abundance["RT"][[1]], 3), 1.17)
+  expect_equal(round(net_features_metadata$ChAs["RT"][[1]], 3), 0.748)
+  expect_equal(round(net_features_metadata$`Mean degree`["RT"][[1]], 3), 3.48)
+  # PP network only
+  baits <- chaser::export(chaser_net, "baits")
+  chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+  pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
+  expect_equal(round(pp_net_features_metadata$Abundance["RT"][[1]], 3), 1.76)
+  expect_equal(round(pp_net_features_metadata$ChAs["RT"][[1]], 3), 0.701)
+  expect_equal(round(pp_net_features_metadata$`Mean degree`["RT"][[1]], 3), 3.44)
+  # PO network only
+  all_oes <- chaser::export(chaser_net, "nodes")$name
+  oes <- all_oes[!(all_oes %in% baits)]
+  chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+  po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
+  expect_equal(round(po_net_features_metadata$Abundance["RT"][[1]], 3), 1.16)
+  expect_equal(round(po_net_features_metadata$ChAs["RT"][[1]], 3), 0.752)
+  expect_equal(round(po_net_features_metadata$`Mean degree`["RT"][[1]], 3), 3.16)
+})
