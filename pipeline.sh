@@ -79,13 +79,13 @@ for file in $(realpath "$input"/*); do
     if ! $only_metadata; then
       # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
       # shellcheck disable=SC2086
-      parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --monochrome-output --compact-output .elements > $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string
+      parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} | sed -e '/chr/! s/\"[[:space:]]*\(-\?[[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --monochrome-output --compact-output .elements > $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string
       # Always verify at the end all chromosomes are well generated
     else
       rmdir "$output_folder/$organism/$cell_type/chromosomes" 2>/dev/null
       # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
       # shellcheck disable=SC2086
-      parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} | sed -e '/chr/! s/\"[[:space:]]*\([[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/' > /dev/null" ::: 1
+      parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} | sed -e '/chr/! s/\"[[:space:]]*\(-\?[[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/' > /dev/null" ::: 1
     fi
     ;;
   esac
