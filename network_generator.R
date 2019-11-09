@@ -231,15 +231,15 @@ if (is.null(required_subnet)) {
 
         # All network
         baits <- chaser::export(chaser_net, "baits")
-        net_features_metadata <- generate_features_metadata(chaser_net, randomize = 100, preserve.nodes = baits)
+        net_features_metadata <- generate_features_metadata(chaser_net, randomize = 50, preserve.distances = T)
         # PP network only
         chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
-        pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
+        pp_net_features_metadata <- generate_features_metadata(chaser_net_bb, randomize = 50, preserve.distances = T)
         # PO network only
         all_oes <- chaser::export(chaser_net, "nodes")$name
         oes <- all_oes[!(all_oes %in% baits)]
         chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
-        po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
+        po_net_features_metadata <- generate_features_metadata(chaser_net_bo, randomize = 50, preserve.distances = F)
         features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
         write(toJSON(features_metadata), file = file.path(output_folder, organism, cell_type, "features_metadata.json"))
         curated_PCHiC_vertex[, initial_features_position:length(curated_PCHiC_vertex)] <- round(curated_PCHiC_vertex[, initial_features_position:length(curated_PCHiC_vertex)], 2)
