@@ -656,9 +656,9 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias) {
   if (there_are_other_ends) {
     curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>%
       dplyr::select(-c(hgnc, alias, ensembl, gene_type)) %>%
-      unnest()
+      unnest(cols = c(all_bait_names))
   } else {
-    curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% unnest()
+    curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% unnest(cols = c(all_bait_names))
   }
   alias_promoters <- alias %>%
     rename(`Gene name` = "all_bait_names") %>%
@@ -761,9 +761,9 @@ generate_alias_mus <- function(curated_PCHiC_vertex, alias) {
   if (there_are_other_ends) {
     curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>%
       dplyr::select(-c(mgi, ensembl, gene_type)) %>%
-      unnest()
+      unnest(cols = c(all_bait_names))
   } else {
-    curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% tidyr::unnest()
+    curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% tidyr::unnest(cols = c(all_bait_names))
   }
   alias_promoters <- alias %>%
     rename(`Gene name` = "all_bait_names") %>%
