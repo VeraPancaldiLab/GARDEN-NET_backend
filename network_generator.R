@@ -51,7 +51,10 @@ PCHiC <- load_PCHiC(args$PCHiC)
 PCHiC <- filter_by_threshold(PCHiC, args$wt_threshold)
 
 # Add bait and other-end types
-PCHiC <- add_PCHiC_types(PCHiC)
+# Generate chaser network from PCHiC data
+chaser_input_PCHiC <- generate_input_chaser_PCHiC(PCHiC)
+chaser_net <- chaser::make_chromnet(chaser_input_PCHiC)
+PCHiC <- add_PCHiC_types(PCHiC, chaser_net)
 
 PCHiC_ALL <- PCHiC
 
@@ -219,10 +222,6 @@ if (is.null(required_subnet)) {
 
       # Generate suggestions for the web
       suggestions <- generate_suggestions(net)
-
-      # Generate chaser network from PCHiC data
-      chaser_input_PCHiC <- generate_input_chaser_PCHiC(PCHiC_ALL)
-      chaser_net <- make_chromnet(chaser_input_PCHiC)
 
       if (!is.null(args$features)) {
         # Map directly to the chaser nodes the features from curated vertex

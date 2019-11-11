@@ -437,13 +437,13 @@ generate_graph_metadata <- function(net) {
 #' @description Add promoter-promoter or promoter other-end interaction type to PCHiC data
 #' @param PCHiC PCHiC data
 #' @return PCHiC data with types
-add_PCHiC_types <- function(PCHiC) {
+add_PCHiC_types <- function(PCHiC, chaser_net) {
   # Add the type for bait and oes
   # Be careful because in the oe column there are many baits
   # So oe is only oe if it not exist in the bait column
-  baits <- str_c(PCHiC$baitChr, PCHiC$baitStart, PCHiC$baitEnd, sep = "_")
-  oes <- str_c(PCHiC$oeChr, PCHiC$oeStart, PCHiC$oeEnd, sep = "_")
-  PCHiC$type <- ifelse(oes %in% baits, "P-P", "P-O")
+  real_baits <- chaser::export(chaser_net, "baits")
+  oes <- str_c("chr", PCHiC$oeChr, ":", PCHiC$oeStart, "-", PCHiC$oeEnd)
+  PCHiC$type <- ifelse(oes %in% real_baits, "P-P", "P-O")
   PCHiC
 }
 
