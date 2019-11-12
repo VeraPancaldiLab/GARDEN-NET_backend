@@ -177,7 +177,7 @@ Backend for the [network_generator.R](network_generator.R) script
 docker build -t garden-net_backend
 
 ### Force to regenerate chaser package
-docker build --build-arg UPDATE_CHASER_VERSION=T -t garden-net_backend .
+docker build --build-arg UPDATE_CHASER_VERSION=$(date +%Y%m%d-%H%M%S) -t garden-net_backend .
 
 ### Run containers
 
