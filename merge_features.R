@@ -62,81 +62,82 @@ if (args$feature_format_function == "" || args$feature_format_function == "None"
 
 # Define good default return status at the beginning and define a bad status in the catch block
 return_status <- 0
-tryCatch({
-  # Load user features to the chaser network with the parameters customized by the user
-  chaser_net <- chaser::load_features(chaser_net, args$features_file, featname = feature_name, type = args$features_file_type, missingv = 0, auxfun = args$feature_format_function)
+tryCatch(
+  {
+    # Load user features to the chaser network with the parameters customized by the user
+    chaser_net <- chaser::load_features(chaser_net, args$features_file, featname = feature_name, type = args$features_file_type, missingv = 0, auxfun = args$feature_format_function)
 
-  counter <- counter + 1
+    counter <- counter + 1
 
-  # All network
-  if (!is.null(args$fifo_file)) {
-    con <- pipe(paste("echo 'Generating features metadata for whole network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
-    close(con)
+    # All network
+    if (!is.null(args$fifo_file)) {
+      con <- pipe(paste("echo 'Generating features metadata for whole network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+      close(con)
+    }
+
+    # Define bait nodes for the random preservation and for the promoter-promoter only statistics
+    baits <- chaser::export(chaser_net, "baits")
+    net_features_metadata <- generate_features_metadata(chaser_net, randomize = 1, preserve.distances = T)
+    counter <- counter + 1
+
+    if (!is.null(args$fifo_file)) {
+      con <- pipe(paste("echo 'Generating features metadata for PP only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+      close(con)
+    }
+    # PP network only
+    chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+    pp_net_features_metadata <- generate_features_metadata(chaser_net_bb, randomize = 1, preserve.distances = T)
+
+    counter <- counter + 1
+
+    if (!is.null(args$fifo_file)) {
+      con <- pipe(paste("echo 'Generating features metadata for PO only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+      close(con)
+    }
+    # PO network only
+    all_oes <- chaser::export(chaser_net, "nodes")$name
+    oes <- all_oes[!(all_oes %in% baits)]
+    chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+    po_net_features_metadata <- generate_features_metadata(chaser_net_bo, randomize = 1, preserve.distances = F)
+
+    features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
+
+    features <- as_tibble(chaser_net$features, rownames = "fragment")
+    # Use feature name when the chaser format provides it
+    if (args$features_file_type == "macs2" || args$features_file_type == "bed3" || args$features_file_type == "bed6") {
+      colnames(features)[2] <- feature_name
+    }
+
+    # Convert from genomic positions to node positions
+    features$fragment <- sapply(features$fragment, function(fragment) {
+      str_remove(str_replace_all(fragment, "[-:]", fixed("_")), fixed("chr"))
+    })
+
+    # Always the fragment column has to be the first
+    features <- features %>% select(fragment, everything())
+
+    # Convert features tibble to json
+    to_json <- list()
+    for (index in 2:length(colnames(features))) {
+      feature <- colnames(features)[index]
+      features_for_json <- pull(features, feature)
+      names(features_for_json) <- features$fragment
+      # Remove forbidden feature name characters for cytoscape
+      to_json[[str_remove_all(feature, "[- ,\\(\\)\\[\\]]")]] <- features_for_json
+    }
+
+
+    write(toJSON(to_json), file.path(tmp_dir_path, "features.json"))
+    write(toJSON(features_metadata), file.path(tmp_dir_path, "features_metadata.json"))
+  },
+  error = function(error) {
+    print(error)
+    return_status <- 1
+  },
+  finally = {
+    if (!is.null(args$fifo_file)) {
+      pipe(paste("echo QUIT >", args$fifo_file, sep = " "), "w")
+    }
+    quit(status = return_status)
   }
-
-  # Define bait nodes for the random preservation and for the promoter-promoter only statistics
-  baits <- chaser::export(chaser_net, "baits")
-  net_features_metadata <- generate_features_metadata(chaser_net, randomize = 10, preserve.nodes = baits)
-  counter <- counter + 1
-
-  if (!is.null(args$fifo_file)) {
-    con <- pipe(paste("echo 'Generating features metadata for PP only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
-    close(con)
-  }
-  # PP network only
-  chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
-  pp_net_features_metadata <- generate_features_metadata(chaser_net_bb)
-
-  counter <- counter + 1
-
-  if (!is.null(args$fifo_file)) {
-    con <- pipe(paste("echo 'Generating features metadata for PO only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
-    close(con)
-  }
-  # PO network only
-  all_oes <- chaser::export(chaser_net, "nodes")$name
-  oes <- all_oes[!(all_oes %in% baits)]
-  chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
-  po_net_features_metadata <- generate_features_metadata(chaser_net_bo)
-
-  features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
-
-  features <- as_tibble(chaser_net$features, rownames = "fragment")
-  # Use feature name when the chaser format provides it
-  if (args$features_file_type == "macs2" || args$features_file_type == "bed3" || args$features_file_type == "bed6") {
-    colnames(features)[2] <- feature_name
-  }
-
-  # Convert from genomic positions to node positions
-  features$fragment <- sapply(features$fragment, function(fragment) {
-    str_remove(str_replace_all(fragment, "[-:]", fixed("_")), fixed("chr"))
-  })
-
-  # Always the fragment column has to be the first
-  features <- features %>% select(fragment, everything())
-
-  # Convert features tibble to json
-  to_json <- list()
-  for (index in 2:length(colnames(features))) {
-    feature <- colnames(features)[index]
-    features_for_json <- pull(features, feature)
-    names(features_for_json) <- features$fragment
-    # Remove forbidden feature name characters for cytoscape
-    to_json[[str_remove_all(feature, "[- ,\\(\\)\\[\\]]")]] <- features_for_json
-  }
-
-
-  write(toJSON(to_json), file.path(tmp_dir_path, "features.json"))
-  write(toJSON(features_metadata), file.path(tmp_dir_path, "features_metadata.json"))
-},
-error = function(error) {
-  print(error)
-  return_status <- 1
-},
-finally = {
-  if (!is.null(args$fifo_file)) {
-    pipe(paste("echo QUIT >", args$fifo_file, sep = " "), "w")
-  }
-  quit(status = return_status)
-}
 )
