@@ -20,10 +20,14 @@ if (!file.exists(rdata)) {
     col_types = cols(baitChr = col_character(), oeChr = col_character())
   )
   homo_PCHiC <- filter_by_threshold(homo_PCHiC, 5.0)
-  homo_PCHiC <- add_PCHiC_types(homo_PCHiC)
+  chaser_input_PCHiC_homo <- generate_input_chaser_PCHiC(homo_PCHiC)
+  chaser_net_homo <- make_chromnet(chaser_input_PCHiC_homo)
+  homo_PCHiC <- add_PCHiC_types(homo_PCHiC, chaser_net_homo)
   homo_PCHiC_PP <- homo_PCHiC[homo_PCHiC$type == "P-P", ]
   mus_PCHiC <- filter_by_threshold(mus_PCHiC, 5.0)
-  mus_PCHiC <- add_PCHiC_types(mus_PCHiC)
+  chaser_input_PCHiC_mus <- generate_input_chaser_PCHiC(mus_PCHiC)
+  chaser_net_mus <- make_chromnet(chaser_input_PCHiC_mus)
+  mus_PCHiC <- add_PCHiC_types(mus_PCHiC, chaser_net_mus)
   mus_PCHiC_PP <- mus_PCHiC[mus_PCHiC$type == "P-P", ]
 
   curated_PCHiC_vertex_mus <- generate_vertex(mus_PCHiC)
@@ -53,6 +57,9 @@ test_that("Testing PCHiC chromosomes", {
   homo_PCHiC_chr1 <- filter_by_chromosome(homo_PCHiC, "1")
   expect_equal(nrow(homo_PCHiC_chr1), 16178)
   expect_equal(nrow(mus_PCHiC_PP), 21039)
+  expect_equal(nrow(homo_PCHiC_PP), 21551)
+  expect_equal(as.vector(table(mus_PCHiC$type)), c(51192, 21039))
+  expect_equal(as.vector(table(homo_PCHiC$type)), c(149880, 21551))
   expect_true(all(homo_PCHiC_chr1$baitChr == "1" | homo_PCHiC_chr1$oeChr == "1"))
   expect_true(all(mus_PCHiC_PP$type == "P-P"))
 })
