@@ -2,7 +2,10 @@ library(testthat)
 library(stringr)
 library(readr)
 library(dplyr)
+library(tidyr)
 library(chaser)
+library(igraph)
+library(GenomicRanges)
 source("../network_generator_lib.R")
 
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-Mon.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv"))
@@ -79,6 +82,56 @@ test_that("Testing PCHiC vertex", {
   expect_equal(nrow(curated_PCHiC_vertex_homo_PP), 10120)
   # hoxa6
   expect_equal(unname(unlist(hoxa6_homo)), c("7_27181769_27195103", "HOXA3 HOXA5 HOXA6 HOXA-AS3 RP1-170O19.22 RP1-170O19.23", "7", "27181769", "27195103", "P"))
+})
+
+context("Testing search EZH2 node")
+test_that("Testing search EZH2 node", {
+  curated_PCHiC_edges_mus <- generate_edges(mus_PCHiC)
+  curated_PCHiC_vertex_mus
+  # Alias needed to search by gene name
+  mus_alias <- read_tsv("../alias_databases/Mus_musculus.tsv", col_types = cols(chr = col_character()))
+  curated_PCHiC_vertex_mus <- generate_alias_mus(curated_PCHiC_vertex_mus, mus_alias)
+  mus_ensembl2name <- mus_alias$`Gene name`
+  names(mus_ensembl2name) <- mus_alias$`Ensembl gene ID`
+  mus_net <- graph_from_data_frame(curated_PCHiC_edges_mus, directed = F, curated_PCHiC_vertex_mus)
+  curated_PCHiC_vertex_mus$name <- curated_PCHiC_vertex_mus$fragment
+  mus_net <- simplify(mus_net, edge.attr.comb = "first")
+  curated_PCHiC_vertex_mus$name <- NULL
+
+  mus_EZH2_subnetwork <- search_subnetwork(search = "EZH2", expand = 0, nearest = T, mus_net, curated_PCHiC_vertex_mus, mus_ensembl2name)
+
+  expect_equal(length(V(mus_EZH2_subnetwork)), 7)
+  expect_equal(count_components(mus_EZH2_subnetwork), 2)
+
+  # Two connected components with EZH2 in the middle: the bigger one V5 and the smaller one V2
+
+  expect_equal(degree(mus_EZH2_subnetwork)[[2]], 1)
+  expect_equal(degree(mus_EZH2_subnetwork)[[5]], 4)
+
+  expect_equal(neighbors(mus_EZH2_subnetwork, V(mus_EZH2_subnetwork)[[2]])$gene_names, c("Atp5g3"))
+  expect_equal(neighbors(mus_EZH2_subnetwork, V(mus_EZH2_subnetwork)[[5]])$gene_names, c("Adck2", "CNTNAP2", "EZH2", "Stk31"))
+
+  curated_PCHiC_edges_homo <- generate_edges(homo_PCHiC)
+  curated_PCHiC_vertex_homo
+  # Alias needed to search by gene name
+  homo_alias <- read_tsv("../alias_databases/Homo_sapiens.tsv", col_types = cols(chr = col_character()))
+  curated_PCHiC_vertex_homo <- generate_alias_homo(curated_PCHiC_vertex_homo, homo_alias)
+  homo_ensembl2name <- homo_alias$`Gene name`
+  names(homo_ensembl2name) <- homo_alias$`Ensembl gene ID`
+  homo_net <- graph_from_data_frame(curated_PCHiC_edges_homo, directed = F, curated_PCHiC_vertex_homo)
+  curated_PCHiC_vertex_homo$name <- curated_PCHiC_vertex_homo$fragment
+  homo_net <- simplify(homo_net, edge.attr.comb = "first")
+  curated_PCHiC_vertex_homo$name <- NULL
+
+  homo_EZH2_subnetwork <- search_subnetwork(search = "EZH2", expand = 0, nearest = T, homo_net, curated_PCHiC_vertex_homo, homo_ensembl2name)
+
+  expect_equal(length(V(homo_EZH2_subnetwork)), 27)
+  expect_equal(count_components(homo_EZH2_subnetwork), 1)
+
+  # One connected component with EZH2 in the middle: V5
+  expect_equal(degree(homo_EZH2_subnetwork)[[5]], 24)
+
+  expect_equal(neighbors(homo_EZH2_subnetwork, V(homo_EZH2_subnetwork)[[5]])$gene_names, c("CUL1", "EZH2", "", "", "", "", "", "", "", "", "", "", "", "", "", "CUL1", "CUL1", "CUL1", "RNY5", "RNY4", "", "RNY3", "RNY1", "ZNF398"))
 })
 
 context("Testing chaser package")
