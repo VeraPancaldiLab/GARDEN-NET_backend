@@ -213,9 +213,8 @@ search_subnetwork <- function(search, expand, nearest, net, curated_PCHiC_vertex
   if (!is.null(search)) {
     if (str_detect(search, "(([12]?[0-9])|([XYxy])):\\d+(-\\d+)?$")) {
       # We are working with a range
-      required_subnet <-
-        search_vertex_by_range(search, expand, nearest, net, curated_PCHiC_vertex)
-    } else if (str_detect(search, "(\\w+,\\w+)+")) {
+      required_subnet <- search_vertex_by_range(search, expand, nearest, net, curated_PCHiC_vertex)
+    } else if (str_detect(search, "(\\w+[, \\t]\\w+)+")) {
       gene_list_to_search <- str_split(search, "[, \\t]")[[1]]
       required_subnet <- search_vertex_by_names(gene_list_to_search, net, ensembl2name)
     } else {
