@@ -285,6 +285,19 @@ load_PCHiC <- function(PCHiC_file) {
   ))
 }
 
+#' @title load_HiC
+#' @description Load HiC data
+#' @param HiC_file HiC file
+#' @return HiC as tibble
+load_HiC <- function(HiC_file) {
+  HiC <- suppressMessages(read_tsv(
+    file = HiC_file,
+    col_names = c("baitChr", "baitStart", "baitEnd", "oeChr", "oeStart", "oeEnd"),
+    col_types = cols(baitChr = col_character(), oeChr = col_character())
+  ))
+  HiC[-1, ]
+}
+
 #' @title filter_by_threshold
 #' @description Filter PCHiC data using the threshold
 #' @param PCHiC PCHiC data
@@ -307,7 +320,7 @@ filter_by_chromosome <- function(PCHiC, chromosome) {
 #' @description Generate vertex data from PCHiC data
 #' @param PCHiC data
 #' @return generated vertex
-generate_vertex <- function(PCHiC) {
+generate_vertex <- function(PCHiC, HiC_mode) {
   ## ------------------------------------------------------------------------
   # Join chr number with the start position
   # Also join bait and oe in the same column
@@ -328,7 +341,11 @@ generate_vertex <- function(PCHiC) {
   })
   type <- c(bait_types, oe_types)
   # Extract bait and oe names and join them to the same column
-  gene_names <- c(PCHiC$baitName, PCHiC$oeName)
+  if (!HiC_mode) {
+    gene_names <- c(PCHiC$baitName, PCHiC$oeName)
+  } else {
+    gene_names <- ""
+  }
   # Remove duplicated vertex
   curated_PCHiC_vertex <- distinct(tibble(fragment, gene_names, chr, start, end, type))
   # Uniform "." and NA name to empty strings
@@ -391,7 +408,7 @@ generate_suggestions <- function(net) {
 #' @description Generate graph metadata from an igraph network
 #' @param net igraph network
 #' @return named list with many network properties and statistics
-generate_graph_metadata <- function(net) {
+generate_graph_metadata <- function(net, HiC_mode) {
   nodes <- length(V(net))
   degree_average <- round(mean(degree(net)), 2)
   edges <- length(E(net))
@@ -399,10 +416,13 @@ generate_graph_metadata <- function(net) {
   largest_connected_component <- sort(components(net)$csize, decreasing = T)[1]
   nodes_in_largest_connected_component <- str_c(round(largest_connected_component / nodes * 100, 2), "%")
   network_diameter <- diameter(net)
-  promoters <- sum(V(net)$type == "P")
-  other_ends <- sum(V(net)$type == "O")
-  PP_edges <- sum(E(net)$type == "P-P")
-  PO_edges <- sum(E(net)$type == "P-O")
+  if (!HiC_mode) {
+    promoters <- sum(V(net)$type == "P")
+    other_ends <- sum(V(net)$type == "O")
+    PP_edges <- sum(E(net)$type == "P-P")
+    PO_edges <- sum(E(net)$type == "P-O")
+  }
+
   edge_ends <- ends(net, E(net))
   edge_ends_source <- edge_ends[, 1]
   edge_ends_target <- edge_ends[, 2]
@@ -415,11 +435,17 @@ generate_graph_metadata <- function(net) {
   interchromosomal_interactions <- sum(edge_ends_source_chromosome != edge_ends_target_chromosome)
   clustering_coefficient <- round(transitivity(net), 2)
 
-  network_properties <- list(
-    Nodes = nodes, Edges = edges, Promoters = promoters,
-    "Other ends" = other_ends, "PP edges" = PP_edges, "PO edges" = PO_edges,
-    "Interchromosomal interactions" = interchromosomal_interactions
-  )
+  if (!HiC_mode) {
+    network_properties <- list(
+      Nodes = nodes, Edges = edges, Promoters = promoters,
+      "Other ends" = other_ends, "PP edges" = PP_edges, "PO edges" = PO_edges,
+      "Interchromosomal interactions" = interchromosomal_interactions
+    )
+  } else {
+    network_properties <- list(
+      Nodes = nodes, Edges = edges, "Interchromosomal interactions" = interchromosomal_interactions
+    )
+  }
 
   network_statistics <- list(
     "Degree average" = degree_average, "Connected components (CC)" = connected_components,
@@ -459,6 +485,21 @@ generate_input_chaser_PCHiC <- function(PCHiC) {
   chaser_PCHiC$oeChr <- str_c("chr", chaser_PCHiC$oeChr)
   chaser_PCHiC_df <- as.data.frame(chaser_PCHiC)
   chaser_PCHiC_df
+}
+
+#' @title generate_input_chaser_HiC
+#' @description Convert HiC to chaser input data
+#' @param HiC HiC data
+#' @return HiC
+generate_input_chaser_HiC <- function(HiC) {
+  chaser_HiC <- HiC[, c(1:3, 4:6)]
+  if (any(grepl("MT", chaser_HiC$baitChr))) {
+    chaser_HiC <- chaser_HiC[-grep("MT", chaser_HiC$baitChr), ]
+  }
+  chaser_HiC$baitChr <- str_c("chr", chaser_HiC$baitChr)
+  chaser_HiC$oeChr <- str_c("chr", chaser_HiC$oeChr)
+  chaser_HiC_df <- as.data.frame(chaser_HiC)
+  chaser_HiC_df
 }
 
 #' @title generate_input_chaser_features
@@ -596,7 +637,7 @@ union_graphs_with_attributes <- function(graph_list) {
 #' @seealso
 #'  \code{\link[dplyr]{select}}
 #' @importFrom dplyr select
-generate_alias_homo <- function(curated_PCHiC_vertex, alias) {
+generate_alias_homo <- function(curated_PCHiC_vertex, alias, HiC_mode) {
   # First overlap others ends and annotate them
   curated_PCHiC_vertex_with_alias <- NULL
   there_are_other_ends <- any(curated_PCHiC_vertex$type == "O")
@@ -631,56 +672,58 @@ generate_alias_homo <- function(curated_PCHiC_vertex, alias) {
   } else {
     curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex
   }
-  # Then use promoters transcript names to add the missing annotations
-  all_bait_names <- curated_PCHiC_vertex_with_alias %>%
-    filter(type == "P") %>%
-    select(gene_names) %>%
-    mutate(all_bait_names = str_to_upper(str_c(gene_names, sep = " "))) %>%
-    pull(all_bait_names)
-  curated_bait_names <- sapply(all_bait_names, function(bait_name) {
-    str_trim(str_remove_all(bait_name, "-\\d+\\b"))
-  })
-  curated_bait_names_unique <- sapply(curated_bait_names, function(curated_bait_name) {
-    unique(str_split(curated_bait_name, fixed(" "))[[1]])
-  })
-  names(curated_bait_names_unique) <- NULL
-  # curated_bait_names_unique <- sapply(curated_bait_names, function(curated_bait_name){ length(unique(str_split(curated_bait_name, fixed(" "))[[1]]))})
-  # names(curated_bait_names_unique) <- NULL
-  # Original data with a list of promoters names
-  # curated_PCHiC_vertex_with_alias$gene_names <- ifelse(curated_PCHiC_vertex_with_alias$type=="P",curated_bait_names_unique, curated_PCHiC_vertex_with_alias$gene_names)
-  # Extract all promoters data to do unnest of the names and then the annotation with the symbols
-  curated_bait_names_unique_df <- curated_PCHiC_vertex_with_alias %>% filter(type == "P")
-  curated_bait_names_unique_df$all_bait_names <- curated_bait_names_unique
-  curated_bait_names_unique_df_unnested <- NULL
-  if (there_are_other_ends) {
-    curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>%
-      dplyr::select(-c(hgnc, alias, ensembl, gene_type)) %>%
-      unnest(cols = c(all_bait_names))
-  } else {
-    curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% unnest(cols = c(all_bait_names))
+  if (!HiC_mode) {
+    # Then use promoters transcript names to add the missing annotations
+    all_bait_names <- curated_PCHiC_vertex_with_alias %>%
+      filter(type == "P") %>%
+      select(gene_names) %>%
+      mutate(all_bait_names = str_to_upper(str_c(gene_names, sep = " "))) %>%
+      pull(all_bait_names)
+    curated_bait_names <- sapply(all_bait_names, function(bait_name) {
+      str_trim(str_remove_all(bait_name, "-\\d+\\b"))
+    })
+    curated_bait_names_unique <- sapply(curated_bait_names, function(curated_bait_name) {
+      unique(str_split(curated_bait_name, fixed(" "))[[1]])
+    })
+    names(curated_bait_names_unique) <- NULL
+    # curated_bait_names_unique <- sapply(curated_bait_names, function(curated_bait_name){ length(unique(str_split(curated_bait_name, fixed(" "))[[1]]))})
+    # names(curated_bait_names_unique) <- NULL
+    # Original data with a list of promoters names
+    # curated_PCHiC_vertex_with_alias$gene_names <- ifelse(curated_PCHiC_vertex_with_alias$type=="P",curated_bait_names_unique, curated_PCHiC_vertex_with_alias$gene_names)
+    # Extract all promoters data to do unnest of the names and then the annotation with the symbols
+    curated_bait_names_unique_df <- curated_PCHiC_vertex_with_alias %>% filter(type == "P")
+    curated_bait_names_unique_df$all_bait_names <- curated_bait_names_unique
+    curated_bait_names_unique_df_unnested <- NULL
+    if (there_are_other_ends) {
+      curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>%
+        dplyr::select(-c(hgnc, alias, ensembl, gene_type)) %>%
+        unnest(cols = c(all_bait_names))
+    } else {
+      curated_bait_names_unique_df_unnested <- curated_bait_names_unique_df %>% unnest(cols = c(all_bait_names))
+    }
+    alias_promoters <- alias %>%
+      rename(`Gene name` = "all_bait_names") %>%
+      mutate(all_bait_names = str_to_upper(all_bait_names)) %>%
+      dplyr::select(-c(chr, start, end))
+    promoters_merged_alias <- curated_bait_names_unique_df_unnested %>%
+      left_join(alias_promoters, by = "all_bait_names")
+    promoters_merged_alias_collapsed <- promoters_merged_alias %>%
+      group_by(fragment) %>%
+      summarise(
+        ensembl = str_c(str_replace_na(`Ensembl gene ID`), collapse = " "),
+        gene_type = str_c(str_replace_na(`Gene type`), collapse = " "),
+        hgnc = str_c(str_replace_na(`HGNC ID`), collapse = " "),
+        alias = str_c(str_replace_na(Alias), collapse = " "),
+      )
+
+    # Order promoters according promoters_merged_alias_collapsed
+    curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>% arrange(fragment)
+
+    curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "alias"] <- promoters_merged_alias_collapsed$alias
+    curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "hgnc"] <- promoters_merged_alias_collapsed$hgnc
+    curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "ensembl"] <- promoters_merged_alias_collapsed$ensembl
+    curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "gene_type"] <- promoters_merged_alias_collapsed$gene_type
   }
-  alias_promoters <- alias %>%
-    rename(`Gene name` = "all_bait_names") %>%
-    mutate(all_bait_names = str_to_upper(all_bait_names)) %>%
-    dplyr::select(-c(chr, start, end))
-  promoters_merged_alias <- curated_bait_names_unique_df_unnested %>%
-    left_join(alias_promoters, by = "all_bait_names")
-  promoters_merged_alias_collapsed <- promoters_merged_alias %>%
-    group_by(fragment) %>%
-    summarise(
-      ensembl = str_c(str_replace_na(`Ensembl gene ID`), collapse = " "),
-      gene_type = str_c(str_replace_na(`Gene type`), collapse = " "),
-      hgnc = str_c(str_replace_na(`HGNC ID`), collapse = " "),
-      alias = str_c(str_replace_na(Alias), collapse = " "),
-    )
-
-  # Order promoters according promoters_merged_alias_collapsed
-  curated_PCHiC_vertex_with_alias <- curated_PCHiC_vertex_with_alias %>% arrange(fragment)
-
-  curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "alias"] <- promoters_merged_alias_collapsed$alias
-  curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "hgnc"] <- promoters_merged_alias_collapsed$hgnc
-  curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "ensembl"] <- promoters_merged_alias_collapsed$ensembl
-  curated_PCHiC_vertex_with_alias[curated_PCHiC_vertex_with_alias$type == "P", "gene_type"] <- promoters_merged_alias_collapsed$gene_type
 
   curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$alias) | curated_PCHiC_vertex_with_alias$alias == "NA", "alias"] <- ""
   curated_PCHiC_vertex_with_alias[is.na(curated_PCHiC_vertex_with_alias$hgnc) | curated_PCHiC_vertex_with_alias$hgnc == "NA", "hgnc"] <- ""
