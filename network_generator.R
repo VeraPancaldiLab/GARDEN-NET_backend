@@ -270,7 +270,7 @@ if (is.null(required_subnet)) {
       # Save suggestions
       write(toJSON(suggestions), file = file.path(output_folder, organism, cell_type, "suggestions.json"))
       # Save chromosomes
-      write(toJSON(chromosomes), file = file.path(output_folder, organism, "chromosomes.json"))
+      write(toJSON(chromosomes), file = file.path(output_folder, organism, cell_type, "chromosomes.json"))
       # Save features
       write(toJSON(features), file = file.path(output_folder, organism, cell_type, "features.json"))
       # Save search cache
