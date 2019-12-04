@@ -45,7 +45,8 @@ elif [[ $only_metadata == true ]]; then
   chromosomes_initial_number['Mus_musculus']=1
 fi
 
-# Proccess each file
+tmp_file=$(mktemp)
+# Process each file
 # Extract the realpath of the folder is needed to remove the last separator
 for file in $(realpath "$input"/*); do
   case $file in
@@ -105,20 +106,21 @@ for file in $(realpath "$input"/*); do
 
     if [[ $only_broken_chromosomes == true ]]; then
       rmdir "$output_folder/$organism/$cell_type/metadata" 2>/dev/null
-      parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} | sed -e '/chr/! s/\"[[:space:]]*\(-\?[[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/' > $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string
+      parallel echo "./network_generator.R --PCHiC $file $features_parameter --chromosome {} $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} \| sed -e \'/chr/! s/\"[[:space:]]*\(-\?[[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/\' \> $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string >>"$tmp_file"
     elif [[ $only_metadata == true ]]; then
       rmdir "$output_folder/$organism/$cell_type/chromosomes" 2>/dev/null
       # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
       # shellcheck disable=SC2086
-      parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} | sed -e '/chr/! s/\"[[:space:]]*\(-\?[[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/' > /dev/null" ::: 1
+      parallel echo "./network_generator.R --PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} \| sed -e \'/chr/! s/\"[[:space:]]*\(-\?[[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/\' \> /dev/null" ::: 1 >>"$tmp_file"
     else
       # $chromosomes_seq_string has to be really splited by spaces in words so disable linter here
       # shellcheck disable=SC2086
-      parallel --eta ./network_generator.R "--PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} | sed -e '/chr/! s/\"[[:space:]]*\(-\?[[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/' | ./layout_api_enricher | jq --monochrome-output --compact-output .elements > $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string
+      parallel echo "./network_generator.R --PCHiC $file $features_parameter --chromosome {} --pipeline $output_folder $intronic_parameter --alias ./alias_databases/${organism}.tsv ${bait_names_parameter} \| sed -e \'/chr/! s/\"[[:space:]]*\(-\?[[:digit:]]*\.\?[[:digit:]]\+\)\"/\1/\' \| ./layout_api_enricher \| jq --monochrome-output --compact-output .elements \> $output_folder/$organism/$cell_type/chromosomes/chr{}.json" ::: $chromosomes_seq_string >>"$tmp_file"
     fi
     ;;
   esac
 done
+parallel --eta :::: "$tmp_file"
 
 # Always verify at the end all chromosomes are well generated
 if [[ $only_metadata == false && $only_broken_chromosomes == false ]]; then
