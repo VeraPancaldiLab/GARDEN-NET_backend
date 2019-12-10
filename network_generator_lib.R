@@ -528,23 +528,23 @@ generate_input_chaser_features <- function(curated_PCHiC_vertex, initial_feature
 #' @param preserve.distances preserve distances during the randomization process, Default: T
 #' @return metadata features information
 #' @seealso
-#'  \code{\link[chaser]{randomize}}
-#' @importFrom chaser randomize
-generate_features_metadata <- function(chaser_net, randomize = 50, preserve.distances = T) {
+#'  \code{\link[chaser]{random}}
+#' @importFrom chaser random
+generate_features_metadata <- function(chaser_net, random = 50, preserve.distances = T) {
   features <- colnames(chaser_net$features)
   chas <- chas(chaser_net)
 
-  if (randomize != 0) {
+  if (random != 0) {
     # Calculate random ChAs
-    random_chaser_net_list <- chaser::randomize(chaser_net, nrandom = randomize, dist.match = preserve.distances)
+    random_chaser_net_list <- chaser::randomize(chaser_net, nrandom = random, dist.match = preserve.distances)
     random_chaser_net_list_chas <- lapply(random_chaser_net_list, function(random_chaser_net) {
       chas(random_chaser_net)
     })
 
     random_chas_min <- c()
     random_chas_max <- c()
-    for (feature_index in 1:length(features)) {
-      random_chas_feature <- sapply(1:randomize, function(i) {
+    for (feature_index in seq_len(length(features))) {
+      random_chas_feature <- sapply(1:random, function(i) {
         random_chaser_net_list_chas[[i]][feature_index]
       })
       random_chas_min <- c(random_chas_min, min(random_chas_feature))
