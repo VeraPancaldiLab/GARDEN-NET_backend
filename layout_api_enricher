@@ -56,7 +56,9 @@ else:
     file_content = sys.stdin.read()
 
 # Upload the network to Cytoscape
-post_response = requests.post(CYTOSCAPE_BASE_URL + "/networks", data=file_content)
+post_response = requests.post(
+    CYTOSCAPE_BASE_URL + "/networks", data=file_content, timeout=None
+)
 json_post_response = post_response.json()
 
 # Extract the network id for the next rest requests
@@ -64,7 +66,8 @@ network_id = str(json_post_response["networkSUID"])
 
 # Apply the network layout
 get_response = requests.get(
-    CYTOSCAPE_BASE_URL + "/apply/layouts/" + args.layout + "/" + network_id
+    CYTOSCAPE_BASE_URL + "/apply/layouts/" + args.layout + "/" + network_id,
+    timeout=None,
 )
 
 # Features
@@ -160,11 +163,9 @@ if args.directory:
 # Print the network in json format
 if args.format == "json":
     get_response = requests.get(
-        CYTOSCAPE_BASE_URL + "/networks/" + network_id + "/views/first"
+        CYTOSCAPE_BASE_URL + "/networks/" + network_id + "/views/first", timeout=None
     )
-    requests.delete(
-        CYTOSCAPE_BASE_URL + "/networks/" + network_id
-    )
+    requests.delete(CYTOSCAPE_BASE_URL + "/networks/" + network_id, timeout=None)
     print(get_response.text)
 
 # Save the network image
