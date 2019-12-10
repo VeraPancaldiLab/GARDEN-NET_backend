@@ -882,3 +882,18 @@ generate_real_bait_names <- function(curated_PCHiC_vertex, real_bait_names_file)
 
   merged_curated_PCHiC_vertex_with_baits
 }
+
+remove_no_ASCII_alias <- function(curated_PCHiC_vertex) {
+  utf_8_index <- which(sapply(curated_PCHiC_vertex$alias, . %>% {
+    stringi::stri_enc_mark(.) == "UTF-8"
+  }))
+  curated_PCHiC_vertex$alias[utf_8_index] <- sapply(curated_PCHiC_vertex$alias[utf_8_index], . %>% {
+    genes_alias_UTF8 <- sapply(str_split(., fixed(" ")), . %>% {
+      stringi::stri_enc_mark(.) == "UTF-8"
+    })
+    genes_alias <- str_split(., fixed(" "))[[1]]
+    genes_alias_joined <- str_c(genes_alias[-which(genes_alias_UTF8)], collapse = " ")
+    genes_alias_joined
+  })
+  curated_PCHiC_vertex
+}

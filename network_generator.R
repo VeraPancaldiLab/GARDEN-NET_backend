@@ -39,8 +39,10 @@ args <- commandArgs(trailingOnly = TRUE)
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--chromosome", "1"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv"))
 # args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv", "--search", "hoxa6"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/Mus_musculus-Embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv"))
-# args <- parser_arguments(args = c("--PCHiC", "./input_datasets_hic/Homo_sapiens-GM06990.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Mus_musculus-Embryonic_stem_cells.tsv", "--features", "./input_datasets/mus_musculus-embryonic_stem_cells.features", "--alias", "./alias_databases/Mus_musculus.tsv"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-GM06990.tsv", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets_hic/Mus_musculus-Dixon2012.tsv", "--features", "./input_datasets_hic/Mus_musculus-Dixon2012.features", "--alias", "./alias_databases/Mus_musculus.tsv"))
+# args <- parser_arguments(args = c("--PCHiC", "./input_datasets/Homo_sapiens-naCD4.tsv", "--features", "./input_datasets_homo_features/Homo_sapiens-naCD4.features", "--alias", "./alias_databases/Homo_sapiens.tsv", "--intronic_regions", "intronic_regions.tsv", "--bait_names", "./HindIII_annotation_ens37.txt"))
 
 # Load parameters from command line
 args <- parser_arguments(args)
@@ -107,6 +109,9 @@ if (!is.null(args$alias)) {
     curated_PCHiC_vertex <- generate_alias_mus(curated_PCHiC_vertex, alias, HiC_mode)
   } else if (organism == "Homo_sapiens") {
     curated_PCHiC_vertex <- generate_alias_homo(curated_PCHiC_vertex, alias, HiC_mode)
+    # Remove weird alias names like PKCβ, PKCα, FRγ
+    # which are in UTF-8 and break json files
+    curated_PCHiC_vertex <- remove_no_ASCII_alias(curated_PCHiC_vertex)
   }
 }
 
