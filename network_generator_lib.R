@@ -292,9 +292,9 @@ load_PCHiC <- function(PCHiC_file) {
 load_HiC <- function(HiC_file) {
   HiC <- suppressMessages(read_tsv(
     file = HiC_file,
-    col_names = c("baitChr", "baitStart", "baitEnd", "oeChr", "oeStart", "oeEnd"),
-    col_types = cols(baitChr = col_character(), oeChr = col_character())
+    col_types = cols(chrom_from = col_character(), chrom_to = col_character())
   ))
+  colnames(HiC) <- c("baitChr", "baitStart", "baitEnd", "oeChr", "oeStart", "oeEnd")
   HiC[-1, ]
 }
 
