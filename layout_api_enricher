@@ -5,6 +5,7 @@ import argparse
 import os
 import requests
 import sys
+import re
 import time
 import pprint
 from termcolor import colored
@@ -172,7 +173,12 @@ if args.format == "json":
         CYTOSCAPE_BASE_URL + "/networks/" + network_id + "/views/first", timeout=None
     )
     requests.delete(CYTOSCAPE_BASE_URL + "/networks/" + network_id, timeout=None)
-    print(get_response.text)
+
+    # Exponential numbers to int (required by Cytoscape 3.8)
+    json_text = get_response.text
+
+    json_text = re.sub(r"\d\.\d+E\d+", lambda e: str(int(float(e.group(0)))), json_text)
+    print(json_text)
 
 # Save the network image
 elif args.format in ["png", "pdf", "svg", "all_images"]:
