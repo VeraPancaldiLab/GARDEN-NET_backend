@@ -252,17 +252,17 @@ if (is.null(required_subnet)) {
         chaser_net <- chaser::load_features(chaser_net, chaser_input_features, type = "features_on_nodes", missingv = 0)
 
         # All network
-        net_features_metadata <- generate_features_metadata(chaser_net, randomize = 50, preserve.distances = T)
+        net_features_metadata <- generate_features_metadata(chaser_net, randomizations = 10, preserve.distances = T)
         if (!HiC_mode) {
           # PP network only
           baits <- chaser::export(chaser_net, "baits")
           chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
-          pp_net_features_metadata <- generate_features_metadata(chaser_net_bb, randomize = 50, preserve.distances = T)
+          pp_net_features_metadata <- generate_features_metadata(chaser_net_bb, randomizations = 10, preserve.distances = T)
           # PO network only
           all_oes <- chaser::export(chaser_net, "nodes")$name
           oes <- all_oes[!(all_oes %in% baits)]
           chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
-          po_net_features_metadata <- generate_features_metadata(chaser_net_bo, randomize = 50, preserve.distances = F)
+          po_net_features_metadata <- generate_features_metadata(chaser_net_bo, randomizations = 10, preserve.distances = F)
           features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
         } else {
           features_metadata <- list(net = net_features_metadata, pp = NULL, po = NULL)

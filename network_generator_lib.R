@@ -524,19 +524,19 @@ generate_input_chaser_features <- function(curated_PCHiC_vertex, initial_feature
 #' @title generate_features_metadata
 #' @description Generate ChAs, random ChAs, abundance and mean degree for each feature
 #' @param chaser_net chaser network
-#' @param randomize number of random ChAs networks to be used to calculate the random range, Default: 50
+#' @param randomizations number of random ChAs networks to be used to calculate the random range, Default: 50
 #' @param preserve.distances preserve distances during the randomization process, Default: T
 #' @return metadata features information
 #' @seealso
-#'  \code{\link[chaser]{random}}
-#' @importFrom chaser random
-generate_features_metadata <- function(chaser_net, random = 50, preserve.distances = T) {
+#'  \code{\link[chaser]{randomize}}
+#' @importFrom chaser randomize
+generate_features_metadata <- function(chaser_net, randomizations = 50, preserve.distances = T) {
   features <- colnames(chaser_net$features)
   chas <- chas(chaser_net)
 
-  if (random != 0) {
+  if (randomizations != 0) {
     # Calculate random ChAs
-    random_chaser_net_list <- chaser::randomize(chaser_net, nrandom = random, dist.match = preserve.distances)
+    random_chaser_net_list <- chaser::randomize(chaser_net, nrandom = randomizations, dist.match = preserve.distances)
     random_chaser_net_list_chas <- lapply(random_chaser_net_list, function(random_chaser_net) {
       chas(random_chaser_net)
     })
@@ -544,7 +544,7 @@ generate_features_metadata <- function(chaser_net, random = 50, preserve.distanc
     random_chas_min <- c()
     random_chas_max <- c()
     for (feature_index in seq_len(length(features))) {
-      random_chas_feature <- sapply(1:random, function(i) {
+      random_chas_feature <- sapply(1:randomizations, function(i) {
         random_chaser_net_list_chas[[i]][feature_index]
       })
       random_chas_min <- c(random_chas_min, min(random_chas_feature))
@@ -568,7 +568,7 @@ generate_features_metadata <- function(chaser_net, random = 50, preserve.distanc
   features_metadata <- list()
   features_metadata[["Abundance"]] <- abundance
   features_metadata[["ChAs"]] <- chas
-  if (randomize != 0) {
+  if (randomizations != 0) {
     features_metadata[["Random ChAs interval"]] <- random_chas
   }
   features_metadata[["Mean degree"]] <- mean_degree
