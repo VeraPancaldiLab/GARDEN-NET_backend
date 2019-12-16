@@ -75,32 +75,37 @@ tryCatch(
       close(con)
     }
 
-    # Define bait nodes for the random preservation and for the promoter-promoter only statistics
-    baits <- chaser::export(chaser_net, "baits")
-    net_features_metadata <- generate_features_metadata(chaser_net, randomize = 1, preserve.distances = T)
+    net_features_metadata <- generate_features_metadata(chaser_net, randomizations = 1, preserve.distances = T)
     counter <- counter + 1
 
-    if (!is.null(args$fifo_file)) {
-      con <- pipe(paste("echo 'Generating features metadata for PP only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
-      close(con)
+    if (!args$cell_type %in% c("GM06990", "Dixon2012")) {
+      if (!is.null(args$fifo_file)) {
+        con <- pipe(paste("echo 'Generating features metadata for PP only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+        close(con)
+      }
+
+      # PP network only
+      baits <- chaser::export(chaser_net, "baits")
+      chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
+      # Define bait nodes for the random preservation and for the promoter-promoter only statistics
+      pp_net_features_metadata <- generate_features_metadata(chaser_net_bb, randomizations = 1, preserve.distances = T)
+
+      counter <- counter + 1
+
+      if (!is.null(args$fifo_file)) {
+        con <- pipe(paste("echo 'Generating features metadata for PO only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
+        close(con)
+      }
+      # PO network only
+      all_oes <- chaser::export(chaser_net, "nodes")$name
+      oes <- all_oes[!(all_oes %in% baits)]
+      chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
+      po_net_features_metadata <- generate_features_metadata(chaser_net_bo, preserve.distances = F)
+
+      features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
+    } else {
+      features_metadata <- list(net = net_features_metadata, pp = NULL, po = NULL)
     }
-    # PP network only
-    chaser_net_bb <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits)
-    pp_net_features_metadata <- generate_features_metadata(chaser_net_bb, randomize = 1, preserve.distances = T)
-
-    counter <- counter + 1
-
-    if (!is.null(args$fifo_file)) {
-      con <- pipe(paste("echo 'Generating features metadata for PO only network:", counter / total * 100, "'>", args$fifo_file, sep = " "), "w")
-      close(con)
-    }
-    # PO network only
-    all_oes <- chaser::export(chaser_net, "nodes")$name
-    oes <- all_oes[!(all_oes %in% baits)]
-    chaser_net_bo <- chaser::subset_chromnet(chaser_net, method = "nodes", nodes1 = baits, nodes2 = oes)
-    po_net_features_metadata <- generate_features_metadata(chaser_net_bo, randomize = 1, preserve.distances = F)
-
-    features_metadata <- list(net = net_features_metadata, pp = pp_net_features_metadata, po = po_net_features_metadata)
 
     features <- as_tibble(chaser_net$features, rownames = "fragment")
     # Use feature name when the chaser format provides it
