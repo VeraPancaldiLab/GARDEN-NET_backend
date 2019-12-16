@@ -22,7 +22,7 @@ RUN pip3 install flask flask-cors gunicorn celery[redis]
 
 RUN apt install -y curl libssl-dev libxml2-dev libcurl4-openssl-dev
 
-RUN Rscript -e 'install.packages(c("tibble", "stringr", "readr",  "dplyr", "rjson", "igraph", "optparse", "devtools"))'
+RUN Rscript -e 'install.packages(c("tibble", "stringr", "readr",  "dplyr", "rjson", "igraph", "optparse", "devtools", "data.table"))'
 
 RUN Rscript -e 'install.packages("BiocManager")'
 
